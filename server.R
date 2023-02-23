@@ -39,8 +39,10 @@ server <- function(input, output) {
     if (is.null(inFile1) & is.null(inFile2)) return(NULL)
     Rf <- read.delim(inFile1$datapath, header=FALSE, comment.char="#")                 #load first grp-file
     if(ncol(Rf)==1){ Rf <- read.table(inFile1$datapath, quote="\"", comment.char="")}
+    if(all(Rf[,1]==1:nrow(Rf))){Rf <- Rf[,2:ncol(Rf)]} 
     Rr <- read.delim(inFile2$datapath, header=FALSE, comment.char="#")                 #load second grp-file
     if(ncol(Rr)==1){ Rr <- read.table(inFile2$datapath, quote="\"", comment.char="")}
+    if(all(Rr[,1]==1:nrow(Rr))){Rr <- Rr[,2:ncol(Rr)]}
     if (is.null(input$Name)){
       N <- str_c("Plot_", 1:ncol(Rf))
     } else{N <- readLines(input$Name$datapath)}
@@ -52,7 +54,11 @@ server <- function(input, output) {
   mapD <- reactive({
     inFile <- input$Map
     if (is.null(inFile)) return(NULL)
-    data <- read.csv(inFile$datapath, sep=";")
+    if(str_detect(inFile$name, ".csv")){
+      data <- read.csv(inFile$datapath, sep=";")
+    }else if(str_detect(inFile$name, ".gff3")){
+      data <- load_Gff(inFile$datapath)
+    }
     data
   })
   

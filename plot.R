@@ -408,6 +408,25 @@ RNAplot <- function(Data, Gff, start, end, alpha= 0.8, graph_size = 3,color=c(),
 
 
 
+load_Gff <- function(input){
+  G <- ape::read.gff(input)
+  G$ID <- str_extract(G$attributes,one_or_more(WRD)%R%DOT%R%DGT)
+  G$Gen <- str_extract(G$attributes,"gene-"%R%one_or_more(WRD))
+  G$Gen <- str_sub(G$Gen,6,-1)
+  G$strand <- sapply(G$strand, function(i) c(1,-1)[which(c("+","-")==i)])
+  b <- which(!duplicated(G[,c(4,5,7,11)]) & !is.na(G$Gen))
+  G <- G[b,c(1,11,3:5,7)]
+  colnames(G) <- c("molecule", "gene", "type", "start", "end", "orientation")
+  G$color <- "#4682B4"
+  G$color[G$type !="gene"] <- "#D6DA18"
+  G$from <- NA
+  G$to <- NA
+  G$subcolor <- NA
+  G$label_type <- "bold"
+  G$label_type[G$type =="gene"] <- "bold.italic"
+  G$lane <- 1
+  return(G)
+}
 
 
 

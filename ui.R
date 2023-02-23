@@ -11,6 +11,7 @@ library(shiny)
 library(DT)
 library(dplyr)
 library(shinyWidgets)
+library(shinythemes)
 
 
 source("plot.R")
@@ -20,6 +21,7 @@ options(shiny.maxRequestSize=200*1024^2)
 
 ui <-fluidPage(
   titlePanel("RNAplotter"),
+  theme = shinythemes::shinytheme("spacelab"),
   sidebarLayout(
     sidebarPanel(
       tabsetPanel(
@@ -28,7 +30,7 @@ ui <-fluidPage(
                            accept = ".grp"),
                  fileInput("filerev", "Choose rev RNA-file", multiple = FALSE,
                            accept = ".grp"),
-                 fileInput("Map", "enter map.csv-file", multiple = FALSE,
+                 fileInput("Map", "enter map file [csv/gff3]", multiple = FALSE,
                            accept = c(".cvs", ".gff3")),
                  fileInput("Name", "enter names of RNAreads", multiple = FALSE),
                  numericInput("start", "Please enter the start of your read", 1, step = 100),
