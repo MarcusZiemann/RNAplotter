@@ -11,11 +11,12 @@ library(shiny)
 library(DT)
 library(dplyr)
 library(shinyWidgets)
+library(shinycssloaders)
 
 
 source("plot.R")
 
-options(shiny.maxRequestSize=200*1024^2)
+
 
 
 server <- function(input, output) {
@@ -61,6 +62,7 @@ server <- function(input, output) {
     }
     data
   })
+  output$plot <- renderPlot(NULL)
   
   observeEvent(input$do, {
     output$plot <- renderPlot({
@@ -90,10 +92,6 @@ server <- function(input, output) {
   output$foo = downloadHandler(
     filename = 'test.png',
     content = function(file) {
-      device <- function(..., width, height) {
-        grDevices::png(..., width = width, height = height,
-                       res = 300, units = "in")
-      }
       R <- RNAplot(isolate(RNA()),isolate(mapD()), isolate(input$start), isolate(input$end), 
                    alpha = isolate(input$alpha),
                    graph_size = isolate(input$graph_size),
@@ -107,6 +105,6 @@ server <- function(input, output) {
                    arrowhead_height = isolate(input$arrowhead_height),
                    arrowhead_width = isolate(input$arrowhead_width),
                    filter = isolate(input$filter))
-      ggsave(file, plot = R, device = device)
+      ggsave(file, plot = R, width = input$width, height = input$height, units = "in")
     })
 }

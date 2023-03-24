@@ -11,6 +11,7 @@ library(shiny)
 library(DT)
 library(dplyr)
 library(shinyWidgets)
+library(shinycssloaders)
 
 ###program
 RNAplot <- function(Data, Gff, start, end, alpha= 0.8, graph_size = 3,color=c(), colorize_map=TRUE,
@@ -137,9 +138,13 @@ RNAplot <- function(Data, Gff, start, end, alpha= 0.8, graph_size = 3,color=c(),
     scale_fill_manual(values=col2, labels = Nr)           #reorder color
   
   gf <- which(Gff$orientation == 1  & ((Gff$start>start & Gff$start<end) |
-                                         (Gff$end>start & Gff$end<end)))      #get all relevant Gff-elements
+                                         (Gff$end>start & Gff$end<end) |
+                                         (Gff$start<start & Gff$end>start)|
+                                         (Gff$start<end & Gff$end>end)))      #get all relevant Gff-elements
   gr <- which(Gff$orientation == -1  & ((Gff$start>start & Gff$start<end) |
-                                          (Gff$end>start & Gff$end<end)))
+                                          (Gff$end>start & Gff$end<end) |
+                                          (Gff$start<start & Gff$end>start)|
+                                          (Gff$start<end & Gff$end>end)))
   
   lb <- arrow_body_height #width of gene-arrow
   lh <-arrowhead_height
@@ -176,7 +181,8 @@ RNAplot <- function(Data, Gff, start, end, alpha= 0.8, graph_size = 3,color=c(),
     
     gf <- which(G$orientation==1) #which Gff-element is forward
     gr <- which(G$orientation==-1)#which Gff-element is reverse
-  }
+  }else{G <- data.frame(matrix(NA,ncol=ncol(Gff)))
+  colnames(G) <- colnames(Gff)}
   
   if(promlim>0){
     li <- promlim
@@ -222,17 +228,32 @@ RNAplot <- function(Data, Gff, start, end, alpha= 0.8, graph_size = 3,color=c(),
   
   
   if(length(gf)==0){     #in case there is no forward Gff-element...
-    p3 <- ggplot() +     #write empty plot
-      geom_gene_arrow()+
-      theme_void()+
-      scale_x_continuous(limits = c(start,end), expand = c(0, 0))+
-      theme(axis.line.x.bottom=element_line(size=1),
-            axis.text=element_text(size=si, face="bold"), #x-axis is plotted
-            axis.title = element_blank(),
-            axis.text.y=element_blank(),
-            axis.ticks.y=element_blank(),
-            legend.position="none",
-            plot.background = element_rect(fill='transparent', color=NA))
+    if(line_visible){
+      p3 <- ggplot() +     #write empty plot
+        geom_gene_arrow()+
+        theme_genes()+
+        scale_x_continuous(limits = c(start,end), expand = c(0, 0))+
+        theme(axis.line.x.bottom=element_line(size=1),
+              axis.text=element_text(size=si, face="bold"), #x-axis is plotted
+              axis.title = element_blank(),
+              axis.text.y=element_blank(),
+              axis.ticks.y=element_blank(),
+              legend.position="none",
+              plot.background = element_rect(fill='transparent', color=NA))
+    }else{
+      p3 <- ggplot() +     #write empty plot
+        geom_gene_arrow()+
+        theme_void()+
+        scale_x_continuous(limits = c(start,end), expand = c(0, 0))+
+        theme(axis.line.x.bottom=element_line(size=1),
+              axis.text=element_text(size=si, face="bold"), #x-axis is plotted
+              axis.title = element_blank(),
+              axis.text.y=element_blank(),
+              axis.ticks.y=element_blank(),
+              legend.position="none",
+              plot.background = element_rect(fill='transparent', color=NA))
+    }
+    
   }else{
     col1 <- unique(G$color[gf])
     names(col1)<- unique(G$color[gf])

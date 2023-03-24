@@ -12,6 +12,7 @@ library(DT)
 library(dplyr)
 library(shinyWidgets)
 library(shinythemes)
+library(shinycssloaders)
 
 
 source("plot.R")
@@ -31,12 +32,14 @@ ui <-fluidPage(
                  fileInput("filerev", "Choose rev RNA-file", multiple = FALSE,
                            accept = ".grp"),
                  fileInput("Map", "enter map file [csv/gff3]", multiple = FALSE,
-                           accept = c(".cvs", ".gff3")),
+                           accept = c(".csv", ".gff3")),
                  fileInput("Name", "enter names of RNAreads", multiple = FALSE),
                  numericInput("start", "Please enter the start of your read", 1, step = 100),
                  numericInput("end", "Please enter the end of your read", 1e3, step = 100),
                  actionButton("do", "Plot"),
-                 downloadButton('foo')),
+                 downloadButton('foo'),
+                 numericInput("width", "Width:", 7, step = 1),
+                 numericInput("height", "Heigth:", 7, step = 1)),
         tabPanel("optional",
                  numericInput("alpha", "alpha:", 0.8, step = 0.1),
                  numericInput("max_read", "max. number of reads:", NA, step = 100),
@@ -55,7 +58,7 @@ ui <-fluidPage(
     ),
     mainPanel(
       tabsetPanel(
-        tabPanel("Plot", plotOutput("plot")),
+        tabPanel("Plot", withSpinner(plotOutput("plot"), type=6, hide.ui = FALSE)),
         tabPanel("table", DT::DTOutput('table'))
       )
     )
