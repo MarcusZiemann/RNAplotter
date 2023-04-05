@@ -41,7 +41,7 @@ ui <-fluidPage(
                  actionButton("do", "Plot"),
                  downloadButton('foo'),
                  sliderInput("width", "Width:", min = 3, max=30, value =7),
-                 sliderInput("height", "Heigth:", min = 3, max=30, value =7)),
+                 sliderInput("height", "Height:", min = 3, max=30, value =7)),
         tabPanel("optional",
                  materialSwitch(inputId = "Gfill", label = "RNAreads Graphs filled?", value= TRUE),
                  conditionalPanel(condition = "input.Gfill",
