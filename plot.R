@@ -146,7 +146,7 @@ RNAplot <- function(Data, Gff, start, end, alpha= 0.8, graph_size = 3,color=c(),
                          position="identity",color="#000000", size=0.4)+         
       scale_fill_manual(values=col2, labels = Nr)           #reorder color
   }else{
-    p2 <- p2 + geom_line(aes(color=Name), size=Gsize)+                      #no Name for legend
+    p2 <- p2 + geom_line(aes(color=Name), size=Gsize, show.legend = FALSE)+                      #no Name for legend
       scale_color_manual(values=col2, labels = Nr)
   }
   
