@@ -12,24 +12,24 @@ library(DT)
 library(dplyr)
 library(shinyWidgets)
 library(shinycssloaders)
+library(colourpicker)
 
 ###program
-RNAplot <- function(Data, Gff, start, end, alpha= 0.8, graph_size = 3,color=c(), colorize_map=TRUE,
-                    promlim=0, promsearch=c(), subgenes = FALSE, label = TRUE, 
-                    incom_genes ="_partial", max_read=NA, filter=TRUE, rename_graphs=NULL, 
-                    lane_manuel_selection =FALSE, line_visible=TRUE, arrow_body_height= 7, 
-                    arrowhead_height=10, arrowhead_width=8){
+RNAplot <- function(Data, Gff, start, end, alpha= 0.8, graph_size = 3,color=c(),
+                    subgenes = FALSE, incom_genes ="_partial", max_read=NA, filter=TRUE, 
+                    rename_graphs=NULL, line_visible=TRUE, arrow_body_height= 7, 
+                    arrowhead_height=10, arrowhead_width=8, Gfill = TRUE, Gsize =1.2, 
+                    msize= 4, Mwidth =7, ntlength =NA){
   if(is.null(alpha)) alpha <- 0.8
   if(is.null(graph_size)) graph_size <- 3
   if(is.null(subgenes)) subgenes <- TRUE
-  if(is.null(label)) label <- TRUE
   if(is.null(line_visible)) line_visible <- TRUE
   if(is.null(incom_genes)) incom_genes <- "_partial"
   if(is.null(arrow_body_height)) arrow_body_height <- 7
   if(is.null(arrowhead_height)) arrowhead_height <- 10
   if(is.null(arrowhead_width)) arrowhead_width <- 8
   if(is.null(max_read)) max_read <- NA
-  
+  if(is.null(ntlength)) ntlength <- NA
   
   
   Data2 <- Data
@@ -87,9 +87,7 @@ RNAplot <- function(Data, Gff, start, end, alpha= 0.8, graph_size = 3,color=c(),
     D$y[D$y<(-max_read)] <- -max_read
   }
   
-  
-  p1 <- ggplot(D[f,], aes(x=x, y=y, fill=Name)) +                        #higher lineplot
-    geom_area(position="identity", alpha=alpha, size=0.4,color="#000000")+ #creates a filled lineplot
+  p1 <- ggplot(D[f,], aes(x=x, y=y))+
     theme_bw() +                                                         #deletes background
     theme(panel.grid.major = element_blank(),
           panel.grid.minor = element_blank(),
@@ -103,9 +101,19 @@ RNAplot <- function(Data, Gff, start, end, alpha= 0.8, graph_size = 3,color=c(),
           axis.ticks.x=element_blank(),
           axis.ticks.y.left = element_line(size=1),
           plot.background = element_rect(fill='transparent', color=NA))+ #cosmetic
-    scale_y_continuous(expand = c(0, 0),limits = c(0,max_read))+         #y-axis starts at 0
-    labs(fill = "")+                                                     #no Name for legend
-    scale_fill_manual(values=col, labels = Nf1)                          #colorization and naming of lines
+    scale_y_continuous(expand = c(0, 0),limits = c(0,max_read))          #y-axis starts at 0
+  
+  
+  
+  if(Gfill){
+    p1 <- p1 + geom_area(aes(fill=Name), alpha=alpha, 
+                         position="identity",color="#000000", size=0.4)+         
+      labs(fill = "")+                                                     #no Name for legend
+      scale_fill_manual(values=col, labels = Nf1)
+  }else{
+    p1 <- p1 + geom_line(aes(color=Name), size=Gsize)+         
+      labs(color = "")+                                                     #no Name for legend
+      scale_color_manual(values=col, labels = Nf1)}
   
   
   
@@ -115,10 +123,7 @@ RNAplot <- function(Data, Gff, start, end, alpha= 0.8, graph_size = 3,color=c(),
   Nr <- str_sub(Nr, 1, str_locate(Nr,"rev")[,1]-1)
   col2 <- as.character(sapply(Nr, function(i) col[which(Nf %in% i)]))   #resort colors for plot 2
   
-  
-  
-  p2 <- ggplot(D[r,], aes(x=x, y=y, fill=Name)) +     #lower lineplot
-    geom_area(position="identity", alpha=alpha, size=0.4, show.legend = FALSE, color="#000000")+
+  p2 <- ggplot(D[r,], aes(x=x, y=y)) +     #lower lineplot
     geom_hline(yintercept=0, color="#000000", size=1)+
     theme_bw() +
     theme(panel.grid.major = element_blank(),
@@ -134,8 +139,16 @@ RNAplot <- function(Data, Gff, start, end, alpha= 0.8, graph_size = 3,color=c(),
           axis.ticks.y.left = element_line(size=1),
           plot.background = element_rect(fill='transparent', color=NA))+
     scale_x_continuous(position="top",limits = c(start,end), expand = c(0, 0))+                   #x-axis at top
-    scale_y_continuous(expand = c(0, 0),limits = c(-max_read,0), labels=abs)+      #y-axis starts at zero and shows absolut numbers
-    scale_fill_manual(values=col2, labels = Nr)           #reorder color
+    scale_y_continuous(expand = c(0, 0),limits = c(-max_read,0), labels=abs)     #y-axis starts at zero and shows absolut numbers
+  
+  if(Gfill){
+    p2 <- p2 + geom_area(aes(fill=Name), alpha=alpha, show.legend = FALSE, 
+                         position="identity",color="#000000", size=0.4)+         
+      scale_fill_manual(values=col2, labels = Nr)           #reorder color
+  }else{
+    p2 <- p2 + geom_line(aes(color=Name), size=Gsize)+                      #no Name for legend
+      scale_color_manual(values=col2, labels = Nr)
+  }
   
   gf <- which(Gff$orientation == 1  & ((Gff$start>start & Gff$start<end) |
                                          (Gff$end>start & Gff$end<end) |
@@ -177,41 +190,12 @@ RNAplot <- function(Data, Gff, start, end, alpha= 0.8, graph_size = 3,color=c(),
       G$end[s] <- NA
     }
     
-    if(!colorize_map){ G$color <- "#8dd3c7"}     #if colorize_map is FALSE, then give standard color
     
     gf <- which(G$orientation==1) #which Gff-element is forward
     gr <- which(G$orientation==-1)#which Gff-element is reverse
   }else{G <- data.frame(matrix(NA,ncol=ncol(Gff)))
   colnames(G) <- colnames(Gff)}
   
-  if(promlim>0){
-    li <- promlim
-    ln <- length(n)/40
-    if(length(promsearch)==0){
-      f <- which(str_detect(colnames(Data2),"fwd"))
-      r <- which(str_detect(colnames(Data2),"rev"))
-    }else{
-      f <- which(colnames(Data2) %in% str_c(promsearch,"fwd"))
-      r <- which(colnames(Data2) %in% str_c(promsearch,"rev"))
-    }
-    
-    po <- sapply(n, function(i) any(Data2[i,f]>li))
-    posf <- n[which(po==FALSE & po!=c(po[2:length(po)],FALSE))+1]
-    
-    po <- sapply(n, function(i) any(Data2[i,r]< -(li)))
-    posr <- n[which(po==TRUE & po!=c(po[2:length(po)],TRUE))]
-    Pf <- data.frame(x = posf, x2 = posf+ln, y1 = rep(1, length(posf)), y2 = rep(1.4, length(posf)))
-    Pr <- data.frame(x = posr, x2 = posr-ln, y1 = rep(1, length(posr)), y2 = rep(0.6, length(posr)))
-    
-  }
-  
-  if(lane_manuel_selection & length(c(gf, gr))>0){
-    G$lane <- 1
-    for(i in 1:nrow(G)){
-      G$lane[i] <- as.integer(select.list(as.character(1:9), title=str_c("Which lane is ", G$gene[i],"?"), 
-                                          graphics = T,multiple = FALSE))
-    }
-  }
   if(length(unique(G$lane))>1){
     g <- unique(G$lane)
     l1 <- length(unique(G$lane))
@@ -224,8 +208,11 @@ RNAplot <- function(Data, Gff, start, end, alpha= 0.8, graph_size = 3,color=c(),
     G$molecule[r1] <- G$molecule[1]
     
   }
-  
-  
+  if(is.na(ntlength)){
+    G$gene[(G$endall -G$startall)/(end-start)*Mwidth < strwidth(G$gene, units="inches")*1.5 ] <-""
+  }else{
+    G$gene[abs(G$endall -G$startall) < ntlength ] <-""
+  }
   
   if(length(gf)==0){     #in case there is no forward Gff-element...
     if(line_visible){
@@ -301,25 +288,11 @@ RNAplot <- function(Data, Gff, start, end, alpha= 0.8, graph_size = 3,color=c(),
                                     arrowhead_width = unit(0, "mm"), 
                                     arrow_body_height = unit(lb, "mm"))
     }}
-    if(label==TRUE){
-      p3 <- p3 +  geom_gene_label(aes(xmin = as.integer(startall),       #labeling of arrows
-                                      xmax = as.integer(endall),label = gene,
-                                      fontface = label_type), grow = TRUE, 
-                                  padding.x = grid::unit(0, "mm"),
-                                  padding.y = grid::unit(0, "lines"))
-      
-    }
+    p3 <- p3 +  geom_text(aes(x = (startall+endall)/2, label = gene, fontface = label_type),
+                          size = msize)
+    
+    
   }
-  
-  if(promlim > 0){
-    if(nrow(Pf)>0){
-      p3 <- p3 + geom_segment(aes(x = x, y = y1, xend = x, yend = y2, colour = "segment"), data = Pf, color="#000000",
-                              lineend = "round", size=1)
-      p3 <- p3 +geom_segment(aes(x = x, y = y2, xend = x2, yend = y2), data = Pf,
-                             arrow = arrow(length = unit(0.2, "cm"), type = "open"),
-                             lineend = "round", size=1)
-    }}
-  
   
   if(length(gr)==0){                                  #in case there is no reverse Gff-element...
     p4 <- ggplot() +geom_gene_arrow()+  #write empty plot
@@ -383,25 +356,10 @@ RNAplot <- function(Data, Gff, start, end, alpha= 0.8, graph_size = 3,color=c(),
                                     arrowhead_width = unit(0, "mm"),
                                     arrow_body_height=unit(lb, "mm"))
     }}
-    if(label==TRUE){
-      p4 <- p4 +  geom_gene_label(aes(xmin = as.integer(startall),       #labeling of arrows
-                                      xmax = as.integer(endall),label = gene,
-                                      fontface = label_type), grow = TRUE, 
-                                  padding.x = grid::unit(0, "mm"),
-                                  padding.y = grid::unit(0, "lines"))
-      
-    }
-    
+    p4 <- p4+  geom_text(aes(x = (startall+endall)/2, label = gene, fontface = label_type),
+                         size = msize)
   }
   
-  if(promlim > 0){
-    if(nrow(Pr)>0){
-      p4 <- p4 + geom_segment(aes(x = x, y = y1, xend = x, yend = y2, colour = "segment"), data = Pr, color="#000000",
-                              lineend = "round", size=1)
-      p4 <- p4 +geom_segment(aes(x = x, y = y2, xend = x2, yend = y2), data = Pr,
-                             arrow = arrow(length = unit(0.2, "cm"), type = "open"),
-                             lineend = "round", size=1)
-    }}
   
   p_lab <- ggplot() +               #write empty plot, with text
     annotate(geom = "text", x = 0, y = 0, label = "                             number of reads", 
