@@ -14,6 +14,24 @@ library(shinyWidgets)
 library(shinycssloaders)
 library(colourpicker)
 
+col1 <- c("#228b22",#forestgreen
+          "#186118", #dark green
+          "#4f94cd", #steelblue3
+          "#95bfe1", #light blue
+          "#666666", #gray40
+          "#dbdbdb", #gray86
+          "#e12f0a", #red
+          "#ed826c", #light red
+          "#01e8fe", #aquamarine
+          "#018b98", #dark aquamarine
+          "#d601e1", #violet
+          "#96019e", #dark violet
+          "#fe8601", #orange
+          "#be4e0f", #brown
+          "#000000", #black
+          "#ffffff"
+) 
+
 ###program
 RNAplot <- function(Data, Gff, start, end, alpha= 0.8, graph_size = 3,color=c(),
                     subgenes = FALSE, incom_genes ="_partial", max_read=NA, filter=TRUE, 
@@ -64,6 +82,16 @@ RNAplot <- function(Data, Gff, start, end, alpha= 0.8, graph_size = 3,color=c(),
   Gff$label_type[which(Gff$type!="gene")] <- "bold"}
   if(length(Gff$lane)==0){ Gff$lane <- 1 }
   
+  if(!is.logical(Gff$orientation)){
+    test <- c("+", "fwd", "fw", 1, "forward", "Forward", "f","TRUE")
+    Gff$orientation <- Gff$orientation %in% test
+  }
+  
+  
+  
+  
+  
+  
   
   z <- sort(sapply(unique(D$Name), function(i) sum(D$y[which(D$Name==i)])), decreasing =TRUE)
   D$Name <- factor(D$Name, levels = names(z))#sorts samples by total number of reads
@@ -74,7 +102,7 @@ RNAplot <- function(Data, Gff, start, end, alpha= 0.8, graph_size = 3,color=c(),
   Nf <- str_sub(Nf, 1, str_locate(Nf,"fwd")[,1]-1)  #get Names of RNA-reads, without "fwd"
   
   if(length(color)==0){
-    col <- brewer.pal(max(length(unique(Nf)),3),"Paired")    #create colors for RNA-reads
+    col <- col1[1:length(Nf)]    #create colors for RNA-reads
     col <- as.character(sapply(Nf, function(i) col[which(N %in% i)]))
   }else{
     col <- as.character(sapply(Nf, function(i) color[which(N1 %in% i)]))
@@ -150,14 +178,14 @@ RNAplot <- function(Data, Gff, start, end, alpha= 0.8, graph_size = 3,color=c(),
       scale_color_manual(values=col2, labels = Nr)
   }
   
-  gf <- which(Gff$orientation == 1  & ((Gff$start>start & Gff$start<end) |
-                                         (Gff$end>start & Gff$end<end) |
-                                         (Gff$start<start & Gff$end>start)|
-                                         (Gff$start<end & Gff$end>end)))      #get all relevant Gff-elements
-  gr <- which(Gff$orientation == -1  & ((Gff$start>start & Gff$start<end) |
-                                          (Gff$end>start & Gff$end<end) |
-                                          (Gff$start<start & Gff$end>start)|
-                                          (Gff$start<end & Gff$end>end)))
+  gf <- which(Gff$orientation  & ((Gff$start>start & Gff$start<end) |
+                                    (Gff$end>start & Gff$end<end) |
+                                    (Gff$start<start & Gff$end>start)|
+                                    (Gff$start<end & Gff$end>end)))      #get all relevant Gff-elements
+  gr <- which(!Gff$orientation & ((Gff$start>start & Gff$start<end) |
+                                    (Gff$end>start & Gff$end<end) |
+                                    (Gff$start<start & Gff$end>start)|
+                                    (Gff$start<end & Gff$end>end)))
   
   lb <- arrow_body_height #width of gene-arrow
   lh <-arrowhead_height
@@ -168,8 +196,8 @@ RNAplot <- function(Data, Gff, start, end, alpha= 0.8, graph_size = 3,color=c(),
     G$start <- sapply(c(gf, gr), function(i) min(Gff$start[i],Gff$end[i]))  #gives the lower value to column "start"
     G$end <- sapply(c(gf, gr), function(i) max(Gff$start[i],Gff$end[i]))    #gives the higher value to column "end"
     
-    s <- which((G$start<start & G$orientation==-1) |
-                 G$end>end & G$orientation==1)         #which Gff-elements would have an arrow and over the edge
+    s <- which((G$start<start & !G$orientation) |
+                 G$end>end & G$orientation)         #which Gff-elements would have an arrow and over the edge
     s1 <- which(G$start<start | G$start>end | 
                   G$end<start | G$end>end)             #which Gff-elements are too long
     
@@ -191,8 +219,8 @@ RNAplot <- function(Data, Gff, start, end, alpha= 0.8, graph_size = 3,color=c(),
     }
     
     
-    gf <- which(G$orientation==1) #which Gff-element is forward
-    gr <- which(G$orientation==-1)#which Gff-element is reverse
+    gf <- which(G$orientation) #which Gff-element is forward
+    gr <- which(!G$orientation)#which Gff-element is reverse
   }else{G <- data.frame(matrix(NA,ncol=ncol(Gff)))
   colnames(G) <- colnames(Gff)}
   
@@ -203,7 +231,7 @@ RNAplot <- function(Data, Gff, start, end, alpha= 0.8, graph_size = 3,color=c(),
     gf <- c(gf,1:(l1)+nrow(G))
     gr <- c(gr,1:l1+nrow(G)+l1)
     G[r1,] <-NA
-    G$orientation[r1] <- c(rep(1,l1),rep(-1,l1))
+    G$orientation[r1] <- c(rep(TRUE,l1),rep(FALSE,l1))
     G$lane[r1] <- rep(g,2)
     G$molecule[r1] <- G$molecule[1]
     
@@ -245,12 +273,12 @@ RNAplot <- function(Data, Gff, start, end, alpha= 0.8, graph_size = 3,color=c(),
     col1 <- unique(G$color[gf])
     names(col1)<- unique(G$color[gf])
     p3 <- ggplot(G[gf,], aes(y = as.character(lane))) +
-      geom_gene_arrow(aes(forward = as.integer(orientation), fill=color,             #write Gene-map
+      geom_gene_arrow(aes(forward = orientation, fill=color,             #write Gene-map
                           xmin = as.integer(start), xmax = as.integer(end)),
                       arrowhead_height = unit(lh, "mm"), 
                       arrowhead_width = unit(max(0,lw), "mm"), 
                       arrow_body_height = unit(lb, "mm"))+     #first Gff-elements inside totally in area with regular arrowheads
-      geom_gene_arrow(aes(forward = as.integer(orientation), xmin = as.integer(start1), 
+      geom_gene_arrow(aes(forward = orientation, xmin = as.integer(start1), 
                           xmax = as.integer(end1), fill=color),
                       arrowhead_height = unit(lb*0.6, "mm"), 
                       arrowhead_width = unit(lb*0.3, "mm"), 
@@ -307,13 +335,13 @@ RNAplot <- function(Data, Gff, start, end, alpha= 0.8, graph_size = 3,color=c(),
   }else{
     col1 <- unique(G$color[gr])
     names(col1)<- unique(G$color[gr])
-    p4 <- ggplot(G[gr,], aes(y = as.character(10-lane))) + #write Gene-map (reverse)
-      geom_gene_arrow(aes(forward = as.integer(orientation), xmin = as.integer(start),            
+    p4 <- ggplot(G[gr,], aes(y = as.character(10-as.integer(lane)))) + #write Gene-map (reverse)
+      geom_gene_arrow(aes(forward = orientation, xmin = as.integer(start),            
                           xmax = as.integer(end), fill = color),
                       arrowhead_height = unit(lh, "mm"), 
                       arrowhead_width = unit(lw, "mm"), 
                       arrow_body_height = unit(lb, "mm")) +    #first Gff-elements inside totally in area with regular arrowheads
-      geom_gene_arrow(aes(forward = as.integer(orientation), xmin = as.integer(start1), 
+      geom_gene_arrow(aes(forward = orientation, xmin = as.integer(start1), 
                           xmax = as.integer(end1), fill = color),
                       arrowhead_height = unit(lb*0.6, "mm"), 
                       arrowhead_width = unit(lb*0.3, "mm"), 
@@ -349,7 +377,7 @@ RNAplot <- function(Data, Gff, start, end, alpha= 0.8, graph_size = 3,color=c(),
     
     if(any(!is.na(G$from[gr]))){ if(subgenes){
       p4 <- p4 + geom_subgene_arrow(aes(xmin = as.integer(startall), xmax = as.integer(endall), 
-                                        y = as.character(10-lane), xsubmin = as.integer(from),
+                                        y = as.character(10-as.integer(lane)), xsubmin = as.integer(from),
                                         xsubmax = as.integer(to)), color="black",
                                     fill=G$subcolor[gr],
                                     arrowhead_height = unit(lb, "mm"), 

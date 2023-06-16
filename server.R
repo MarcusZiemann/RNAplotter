@@ -37,11 +37,11 @@ server <- function(input, output) {
       N <- str_c("Plot_", 1:(ncol(RNA())/2))
     } else{N <- readLines(input$Name$datapath)}
     
-    col <- brewer.pal(max(length(unique(N)),3),"Paired")    #create colors for RNA-reads
+    col <- col1[1:length(N)]    #create colors for RNA-reads
     
     tagList(
       lapply(1:length(N), function(i) {
-        colourInput(str_c("P",i), label=N[i], showColour = "background", value = col[i])}))
+        colourInput(str_c("P",i), label=N[i], showColour = "both", value = col[i])}))
   })
   
   output$whichplot <- renderUI({
@@ -91,23 +91,23 @@ server <- function(input, output) {
   observeEvent(input$do, {
     output$plot <- renderPlot({
       
-      isolate(RNAplot(isolate(RNA()),isolate(mapD()), isolate(input$start), isolate(input$end), 
-                      alpha = isolate(input$alpha),
-                      graph_size = isolate(input$graph_size),
-                      subgenes = isolate(input$subgenes),
-                      line_visible = isolate(input$line_visible),
-                      incom_genes = isolate(input$incom_genes),
-                      color = col(),
-                      max_read = isolate(input$max_read),
-                      arrow_body_height = isolate(input$arrow_body_height),
-                      arrowhead_height = isolate(input$arrowhead_height),
-                      arrowhead_width = isolate(input$arrowhead_width),
-                      filter = isolate(input$filter), 
-                      Gfill= isolate(input$Gfill),
-                      Gsize= isolate(input$Gsize),
-                      msize= isolate(input$msize),
-                      Mwidth = isolate(input$width),
-                      ntlength = isolate(input$ntlength)))
+      isolate({RNAplot(RNA(),mapD(), input$start, input$end, 
+                       alpha = input$alpha,
+                       graph_size = input$graph_size,
+                       subgenes = isolate(input$subgenes),
+                       line_visible = input$line_visible,
+                       incom_genes = input$incom_genes,
+                       color = col(),
+                       max_read = input$max_read,
+                       arrow_body_height = input$arrow_body_height,
+                       arrowhead_height = input$arrowhead_height,
+                       arrowhead_width = input$arrowhead_width,
+                       filter = input$filter, 
+                       Gfill= input$Gfill,
+                       Gsize= input$Gsize,
+                       msize= input$msize,
+                       Mwidth = input$width,
+                       ntlength = input$ntlength)})
     })
     
   })
@@ -118,26 +118,29 @@ server <- function(input, output) {
     DT::datatable(mapD2)#, editable = TRUE)
   })
   output$foo = downloadHandler(
-    filename = 'test.png',
+    filename = function() {
+      paste("RNAplot.", input$download_type, sep="")
+    },
     content = function(file) {
-      R <- RNAplot(isolate(RNA()),isolate(mapD()), isolate(input$start), isolate(input$end), 
-                   alpha = isolate(input$alpha),
-                   graph_size = isolate(input$graph_size),
+      R <- isolate({RNAplot(RNA(),mapD(), input$start, input$end, 
+                   alpha = input$alpha,
+                   graph_size = input$graph_size,
                    subgenes = isolate(input$subgenes),
-                   line_visible = isolate(input$line_visible),
-                   incom_genes = isolate(input$incom_genes),
+                   line_visible = input$line_visible,
+                   incom_genes = input$incom_genes,
                    color = col(),
-                   max_read = isolate(input$max_read),
-                   arrow_body_height = isolate(input$arrow_body_height),
-                   arrowhead_height = isolate(input$arrowhead_height),
-                   arrowhead_width = isolate(input$arrowhead_width),
-                   filter = isolate(input$filter), 
-                   Gfill= isolate(input$Gfill),
-                   Gsize= isolate(input$Gsize),
-                   msize= isolate(input$msize),
-                   Mwidth = isolate(input$width),
-                   ntlength = isolate(input$ntlength))
-      ggsave(file, plot = R, width = input$width, height = input$height, units = "in")
+                   max_read = input$max_read,
+                   arrow_body_height = input$arrow_body_height,
+                   arrowhead_height = input$arrowhead_height,
+                   arrowhead_width = input$arrowhead_width,
+                   filter = input$filter, 
+                   Gfill= input$Gfill,
+                   Gsize= input$Gsize,
+                   msize= input$msize,
+                   Mwidth = input$width,
+                   ntlength = input$ntlength)})
+      ggsave(file, plot = R, width = input$width, height = input$height, units = "in", 
+             device = input$download_type)
     })
   output$tabgo <- downloadHandler(
     filename = function(){"Map.csv"}, 
