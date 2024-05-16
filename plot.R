@@ -73,33 +73,24 @@ RNAplot <- function(Data, Gff, start, end, alpha= 0.8, graph_size = 3,color=c(),
   D$x    <- rep(n,length(colnames(Data2)))
   D$y   <- unlist(Data2[n,])
   si <- 13
-  if(length(Gff$color)==0){ Gff$color <- NA }
-  Gff$color <- str_replace_all(Gff$color,SPC,"")
-  if(length(Gff$from)==0){ Gff$from <- NA }
-  if(length(Gff$to)==0){ Gff$to <- NA }
-  if(length(Gff$subcolor)==0){ Gff$subcolor <- NA }
-  if(length(Gff$label_type)==0){ Gff$label_type <- "bold.italic" 
-  Gff$label_type[which(Gff$type!="gene")] <- "bold"}
-  if(length(Gff$lane)==0){ Gff$lane <- 1 }
-  
+
   if(!is.logical(Gff$orientation)){
     test <- c("+", "fwd", "fw", 1, "forward", "Forward", "f","TRUE")
     Gff$orientation <- Gff$orientation %in% test
   }
   
-  
-  
-  
-  
-  
-  
   z <- sort(sapply(unique(D$Name), function(i) sum(D$y[which(D$Name==i)])), decreasing =TRUE)
   D$Name <- factor(D$Name, levels = names(z))#sorts samples by total number of reads
   
-  f <- which(str_detect(D$Name,"fwd"))              #which RNA-reads are forward
+  f <- which(str_sub(D$Name,-3,-1)=="fwd")              #which RNA-reads are forward
   
   Nf <- names(z)[which(str_detect(names(z),"fwd"))]
-  Nf <- str_sub(Nf, 1, str_locate(Nf,"fwd")[,1]-1)  #get Names of RNA-reads, without "fwd"
+  Nf <- str_sub(Nf, 1, -4)  #get Names of RNA-reads, without "fwd"
+  
+  
+  
+  
+  
   
   if(length(color)==0){
     col <- col1[1:length(Nf)]    #create colors for RNA-reads
@@ -129,6 +120,7 @@ RNAplot <- function(Data, Gff, start, end, alpha= 0.8, graph_size = 3,color=c(),
           axis.ticks.x=element_blank(),
           axis.ticks.y.left = element_line(size=1),
           plot.background = element_rect(fill='transparent', color=NA))+ #cosmetic
+    scale_x_continuous(position="top",limits = c(start,end), expand = c(0, 0))+ 
     scale_y_continuous(expand = c(0, 0),limits = c(0,max_read))          #y-axis starts at 0
   
   
@@ -144,11 +136,13 @@ RNAplot <- function(Data, Gff, start, end, alpha= 0.8, graph_size = 3,color=c(),
       scale_color_manual(values=col, labels = Nf1)}
   
   
+  zr <- rev(names(z))
   
-  D$Name <- factor(D$Name, levels = rev(names(z)))                      #reorder Names by size
-  r <- which(str_detect(D$Name,"rev"))                                  #which RNArun is reverse
-  Nr <- rev(names(z))[which(str_detect(rev(names(z)),"rev"))]
-  Nr <- str_sub(Nr, 1, str_locate(Nr,"rev")[,1]-1)
+  D$Name <- factor(D$Name, levels = zr)                      #reorder Names by size
+  r <- which(str_sub(D$Name,-3,-1)=="rev")                                  #which RNArun is reverse
+  Nr <- zr[which(str_sub(zr,-3,-1)=="rev")]
+  Nr <- str_sub(Nr, 1, -4)
+  
   col2 <- as.character(sapply(Nr, function(i) col[which(Nf %in% i)]))   #resort colors for plot 2
   
   p2 <- ggplot(D[r,], aes(x=x, y=y)) +     #lower lineplot
@@ -178,28 +172,20 @@ RNAplot <- function(Data, Gff, start, end, alpha= 0.8, graph_size = 3,color=c(),
       scale_color_manual(values=col2, labels = Nr)
   }
   
-  gf <- which(Gff$orientation  & ((Gff$start>start & Gff$start<end) |
-                                    (Gff$end>start & Gff$end<end) |
-                                    (Gff$start<start & Gff$end>start)|
-                                    (Gff$start<end & Gff$end>end)))      #get all relevant Gff-elements
-  gr <- which(!Gff$orientation & ((Gff$start>start & Gff$start<end) |
-                                    (Gff$end>start & Gff$end<end) |
-                                    (Gff$start<start & Gff$end>start)|
-                                    (Gff$start<end & Gff$end>end)))
+  g0 <- which((Gff$start>=start & Gff$end<=end) |
+                (Gff$start<start & Gff$end>start) |
+                (Gff$start<end & Gff$end>end))#get all relevant Gff-elements
   
   lb <- arrow_body_height #width of gene-arrow
   lh <-arrowhead_height
   lw <-arrowhead_width
   
-  if(length(c(gf, gr))>0){
-    G <- Gff[c(gf, gr),]
-    G$start <- sapply(c(gf, gr), function(i) min(Gff$start[i],Gff$end[i]))  #gives the lower value to column "start"
-    G$end <- sapply(c(gf, gr), function(i) max(Gff$start[i],Gff$end[i]))    #gives the higher value to column "end"
+  if(length(g0)>0){
+    G <- Gff[g0,]
     
     s <- which((G$start<start & !G$orientation) |
                  G$end>end & G$orientation)         #which Gff-elements would have an arrow and over the edge
-    s1 <- which(G$start<start | G$start>end | 
-                  G$end<start | G$end>end)             #which Gff-elements are too long
+    s1 <- which(G$start<start | G$end>end)             #which Gff-elements are too long
     
     if(length(s1)>0){ G$gene[s1] <- str_c(G$gene[s1], incom_genes) }  #rename elements that are to long
     
@@ -221,8 +207,12 @@ RNAplot <- function(Data, Gff, start, end, alpha= 0.8, graph_size = 3,color=c(),
     
     gf <- which(G$orientation) #which Gff-element is forward
     gr <- which(!G$orientation)#which Gff-element is reverse
-  }else{G <- data.frame(matrix(NA,ncol=ncol(Gff)))
-  colnames(G) <- colnames(Gff)}
+  }else{
+    G <- data.frame(matrix(NA,ncol=ncol(Gff)))
+    colnames(G) <- colnames(Gff)
+    gf <-NULL
+    gr <-NULL
+  }
   
   if(length(unique(G$lane))>1){
     g <- unique(G$lane)
@@ -236,42 +226,23 @@ RNAplot <- function(Data, Gff, start, end, alpha= 0.8, graph_size = 3,color=c(),
     G$molecule[r1] <- G$molecule[1]
     
   }
+  
   if(is.na(ntlength)){
     G$gene[(G$endall -G$startall)/(end-start)*Mwidth < strwidth(G$gene, units="inches")*1.5 ] <-""
   }else{
     G$gene[abs(G$endall -G$startall) < ntlength ] <-""
   }
   
+
   if(length(gf)==0){     #in case there is no forward Gff-element...
-    if(line_visible){
-      p3 <- ggplot() +     #write empty plot
-        geom_gene_arrow()+
-        theme_genes()+
-        scale_x_continuous(limits = c(start,end), expand = c(0, 0))+
-        theme(axis.line.x.bottom=element_line(size=1),
-              axis.text=element_text(size=si, face="bold"), #x-axis is plotted
-              axis.title = element_blank(),
-              axis.text.y=element_blank(),
-              axis.ticks.y=element_blank(),
-              legend.position="none",
-              plot.background = element_rect(fill='transparent', color=NA))
-    }else{
-      p3 <- ggplot() +     #write empty plot
-        geom_gene_arrow()+
-        theme_void()+
-        scale_x_continuous(limits = c(start,end), expand = c(0, 0))+
-        theme(axis.line.x.bottom=element_line(size=1),
-              axis.text=element_text(size=si, face="bold"), #x-axis is plotted
-              axis.title = element_blank(),
-              axis.text.y=element_blank(),
-              axis.ticks.y=element_blank(),
-              legend.position="none",
-              plot.background = element_rect(fill='transparent', color=NA))
-    }
+    
+    p3 <- ggplot() +     #write empty plot
+      geom_gene_arrow()
     
   }else{
     col1 <- unique(G$color[gf])
     names(col1)<- unique(G$color[gf])
+    
     p3 <- ggplot(G[gf,], aes(y = as.character(lane))) +
       geom_gene_arrow(aes(forward = orientation, fill=color,             #write Gene-map
                           xmin = as.integer(start), xmax = as.integer(end)),
@@ -284,54 +255,43 @@ RNAplot <- function(Data, Gff, start, end, alpha= 0.8, graph_size = 3,color=c(),
                       arrowhead_width = unit(lb*0.3, "mm"), 
                       arrow_body_height = unit(lb, "mm"))+    #secound Gff-elements with ending outside area with irregular arrowheads
       scale_fill_manual(values=col1) 
-    
-    if(line_visible){
-      p3 <- p3+ theme_genes()+
-        scale_x_continuous(limits = c(start,end), expand = c(0, 0))+             #x-axis range is exactly as the lineplots
-        theme(axis.line.x.bottom=element_line(size=1),         #cosmetics
-              axis.text=element_text(size=si, face="bold"),
-              axis.title = element_blank(),
-              axis.text.y=element_blank(),
-              axis.ticks.y=element_blank(),
-              legend.position="none",                          #no legend
-              plot.background = element_rect(fill='transparent', color=NA))
-    }else{
-      p3 <- p3+ theme_void()+
-        scale_x_continuous(limits = c(start,end), expand = c(0, 0))+             #x-axis range is exactly as the lineplots
-        theme(axis.line.x.bottom=element_line(size=1),         #cosmetics
-              axis.text=element_text(size=si, face="bold"),
-              axis.title = element_blank(),
-              axis.text.y=element_blank(),
-              axis.ticks.y=element_blank(),
-              legend.position="none",                          #no legend
-              plot.background = element_rect(fill='transparent', color=NA))
-    }
-    
-    if(any(!is.na(G$from[gf]))){ if(subgenes){
-      p3 <- p3 + geom_subgene_arrow(aes(xmin = as.integer(startall), xmax = as.integer(endall), 
-                                        y = as.character(lane), xsubmin = as.integer(from),
-                                        xsubmax = as.integer(to)), color="black",
-                                    fill=G$subcolor[gf],
-                                    arrowhead_height = unit(lb, "mm"), 
-                                    arrowhead_width = unit(0, "mm"), 
-                                    arrow_body_height = unit(lb, "mm"))
-    }}
-    p3 <- p3 +  geom_text(aes(x = (startall+endall)/2, label = gene, fontface = label_type),
-                          size = msize)
-    
-    
   }
   
+  if(line_visible){
+    p3 <- p3 + theme_genes()
+  }else{
+    p3 <- p3 + theme_void()
+  }
+  
+  p3 <- p3 + scale_x_continuous(limits = c(start,end), expand = c(0, 0))+
+    theme(axis.line.x.bottom=element_line(size=1),
+          axis.text=element_text(size=si, face="bold"), #x-axis is plotted
+          axis.title = element_blank(),
+          axis.text.y=element_blank(),
+          axis.ticks.y=element_blank(),
+          legend.position="none",
+          plot.background = element_rect(fill='transparent', color=NA))
+  
+  if(length(gf)>0){ 
+    if(any(!is.na(G$from[gf]))){ 
+      if(subgenes){
+        p3 <- p3 + geom_subgene_arrow(aes(xmin = as.integer(startall), xmax = as.integer(endall), 
+                                          y = as.character(lane), xsubmin = as.integer(from),
+                                          xsubmax = as.integer(to)), color="black",
+                                      fill=G$subcolor[gf],
+                                      arrowhead_height = unit(lb, "mm"), 
+                                      arrowhead_width = unit(0, "mm"), 
+                                      arrow_body_height = unit(lb, "mm"))
+      }}
+    p3 <- p3 +  geom_text(aes(x = (startall+endall)/2, label = gene, fontface = label_type),
+                          size = msize)
+  }
+  
+  
+  
   if(length(gr)==0){                                  #in case there is no reverse Gff-element...
-    p4 <- ggplot() +geom_gene_arrow()+  #write empty plot
-      theme_void()+
-      scale_x_continuous(limits = c(start,end))+
-      theme(axis.title = element_blank(),
-            axis.text.y=element_blank(),
-            axis.ticks.y=element_blank(),
-            legend.position="none",
-            plot.background = element_rect(fill='transparent', color=NA))+
-      easy_remove_x_axis()
+    p4 <- ggplot() +geom_gene_arrow()#write empty plot
+    
   }else{
     col1 <- unique(G$color[gr])
     names(col1)<- unique(G$color[gr])
@@ -347,43 +307,38 @@ RNAplot <- function(Data, Gff, start, end, alpha= 0.8, graph_size = 3,color=c(),
                       arrowhead_width = unit(lb*0.3, "mm"), 
                       arrow_body_height = unit(lb, "mm"))+    #secound Gff-elements with ending outside area with irregular arrowheads
       scale_fill_manual(values=col1)     #colorization
-    
-    
-    if(line_visible){
-      p4 <- p4+ theme_genes()+ 
-        scale_x_continuous(limits = c(start,end))+         #x-axis range is exactly as the lineplots
-        theme(axis.text=element_text(size=12, face="bold"),    #text of axis
-              axis.title = element_blank(),
-              axis.text.y=element_blank(),
-              axis.ticks.y=element_blank(),
-              legend.position="none",                          #no legend
-              axis.ticks.x = element_blank(),                  
-              axis.text.x = element_blank(),
-              plot.background = element_rect(fill='transparent', color=NA))+
-        easy_remove_x_axis()    #no x-axis
-    }else{
-      p4 <- p4+ theme_void()+ 
-        scale_x_continuous(limits = c(start,end))+         #x-axis range is exactly as the lineplots
-        theme(axis.text=element_text(size=12, face="bold"),    #text of axis
-              axis.title = element_blank(),
-              axis.text.y=element_blank(),
-              axis.ticks.y=element_blank(),
-              legend.position="none",                          #no legend
-              axis.ticks.x = element_blank(),                  
-              axis.text.x = element_blank(),
-              plot.background = element_rect(fill='transparent', color=NA))+
-        easy_remove_x_axis()    #no x-axis
+  }
+  
+  if(line_visible){
+    p4 <- p4+ theme_genes()
+  }else{
+    p4 <- p4+ theme_void()
+  }
+  
+  p4 <- p4+ 
+    scale_x_continuous(limits = c(start,end))+         #x-axis range is exactly as the lineplots
+    theme(axis.text=element_text(size=12, face="bold"),    #text of axis
+          axis.title = element_blank(),
+          axis.text.y=element_blank(),
+          axis.ticks.y=element_blank(),
+          legend.position="none",                          #no legend
+          axis.ticks.x = element_blank(),                  
+          axis.text.x = element_blank(),
+          plot.background = element_rect(fill='transparent', color=NA))+
+    easy_remove_x_axis()    #no x-axis
+  
+  if(length(gr)>0){
+    if(any(!is.na(G$from[gr]))){ 
+      if(subgenes){
+        p4 <- p4 + geom_subgene_arrow(aes(xmin = as.integer(startall), xmax = as.integer(endall), 
+                                          y = as.character(10-as.integer(lane)), xsubmin = as.integer(from),
+                                          xsubmax = as.integer(to)), color="black",
+                                      fill=G$subcolor[gr],
+                                      arrowhead_height = unit(lb, "mm"), 
+                                      arrowhead_width = unit(0, "mm"),
+                                      arrow_body_height=unit(lb, "mm"))
+      }
     }
-    
-    if(any(!is.na(G$from[gr]))){ if(subgenes){
-      p4 <- p4 + geom_subgene_arrow(aes(xmin = as.integer(startall), xmax = as.integer(endall), 
-                                        y = as.character(10-as.integer(lane)), xsubmin = as.integer(from),
-                                        xsubmax = as.integer(to)), color="black",
-                                    fill=G$subcolor[gr],
-                                    arrowhead_height = unit(lb, "mm"), 
-                                    arrowhead_width = unit(0, "mm"),
-                                    arrow_body_height=unit(lb, "mm"))
-    }}
     p4 <- p4+  geom_text(aes(x = (startall+endall)/2, label = gene, fontface = label_type),
                          size = msize)
   }
@@ -415,7 +370,7 @@ RNAplot <- function(Data, Gff, start, end, alpha= 0.8, graph_size = 3,color=c(),
 
 
 
-load_Gff <- function(input){
+load_Gff3 <- function(input){
   G <- ape::read.gff(input)
   G$ID <- str_extract(G$attributes,one_or_more(WRD)%R%DOT%R%DGT)
   G$Gen <- str_extract(G$attributes,"gene-"%R%one_or_more(WRD))
@@ -424,6 +379,15 @@ load_Gff <- function(input){
   b <- which(!duplicated(G[,c(4,5,7,11)]) & !is.na(G$Gen))
   G <- G[b,c(1,11,3:5,7)]
   colnames(G) <- c("molecule", "gene", "type", "start", "end", "orientation")
+  
+  h <- which(G$start>G$end)#checks values low to "start"; high to "end"
+  if(length(h)>0){
+    g1 <- sapply(h, function(i) min(G$start[i],G$end[i])) 
+    g2 <- sapply(h, function(i) max(G$start[i],G$end[i])) 
+    G$start[h] <- g1               #gives the lower value to column "start"
+    G$end[h] <- g2                 #gives the higher value to column "end"
+    }
+  
   G$color <- "#4682B4"
   G$color[G$type !="gene"] <- "#D6DA18"
   G$from <- NA
@@ -433,6 +397,66 @@ load_Gff <- function(input){
   G$label_type[G$type =="gene"] <- "bold.italic"
   G$lane <- 1
   return(G)
+}
+
+
+load_Gff <- function(input){
+  G <- ape::read.gff(input)
+  G$gene <- str_match(G$attributes,"ID=\\s*(.*?)\\s*;")[,2]
+  colnames(G)[which(colnames(G)=="strand")] <- "orientation"
+  colnames(G)[which(colnames(G)=="seqid")] <- "molecule"
+  
+  h <- which(G$start>G$end)
+  if(length(h)>0){
+    g1 <- sapply(h, function(i) min(G$start[i],G$end[i]))
+    g2 <- sapply(h, function(i) max(G$start[i],G$end[i]))
+    G$start[h] <- g1
+    G$end[h] <- g2
+  }
+  
+  G$color <- "#4682B4"
+  G$color[G$type !="gene"] <- "#D6DA18"
+  G$from <- NA
+  G$to <- NA
+  G$subcolor <- NA
+  G$label_type <- "bold"
+  G$label_type[G$type =="gene"] <- "bold.italic"
+  G$lane <- 1
+  return(G)
+}
+
+load_csv <- function(input){
+  G <- read.csv(input, sep=";")
+  if(colnames(G)[1]=="X" & all(G[,1]==1:nrow(G))){
+    G <- G[,2:ncol(G)]
+  }
+  o <- colnames(G)
+  
+  h <- which(G$start>G$end)
+  if(length(h)>0){
+    g1 <- sapply(h, function(i) min(G$start[i],G$end[i]))
+    g2 <- sapply(h, function(i) max(G$start[i],G$end[i]))
+    G$start[h] <- g1
+    G$end[h] <- g2
+  }
+  
+  if(!any(o %in% "color")){ 
+    G$color <- "#4682B4"
+    G$color[G$type !="gene"] <- "#D6DA18"}
+  G$color <- str_replace_all(G$color,SPC,"")
+  G$color[is.na(G$color)] <- "#D6DA18"
+  
+  if(!any(o %in% "from")){ G$from <- NA }
+  if(!any(o %in% "to")){ G$to <- NA }
+  if(!any(o %in% "subcolor")){ G$subcolor <- NA }
+  if(!any(o %in% "label_type")){ G$label_type <- "bold.italic" 
+  }else{ G$label_type[is.na(G$label_type)] <- "bold.italic" }
+  if(!any(o %in% "lane")){ G$lane <- 1 
+  }else{ G$lane[is.na(G$lane)] <- 1 }
+  
+  return(G)
+  
+  
 }
 
 

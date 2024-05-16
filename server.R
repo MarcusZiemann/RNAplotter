@@ -70,9 +70,11 @@ server <- function(input, output) {
   mapD <- reactive({
     inFile <- input$Map
     if (is.null(inFile)) return(NULL)
-    if(str_detect(inFile$name, ".csv")){
-      data <- read.csv(inFile$datapath, sep=";")
-    }else if(str_detect(inFile$name, ".gff3")){
+    if(str_detect(inFile$name, ".csv"%R%END)){
+      data <- load_csv(inFile$datapath)
+    }else if(str_detect(inFile$name, ".gff3"%R%END)){
+      data <- load_Gff3(inFile$datapath)
+    }else if(str_detect(inFile$name, ".gff"%R%END)){
       data <- load_Gff(inFile$datapath)
     }
     data
