@@ -316,7 +316,7 @@ RNAplot <- function(Data, Gff, start, end, alpha= 0.8, graph_size = 3,color=c(),
   }
   
   p4 <- p4+ 
-    scale_x_continuous(limits = c(start,end))+         #x-axis range is exactly as the lineplots
+    scale_x_continuous(limits = c(start,end), expand = c(0, 0))+         #x-axis range is exactly as the lineplots
     theme(axis.text=element_text(size=12, face="bold"),    #text of axis
           axis.title = element_blank(),
           axis.text.y=element_blank(),
