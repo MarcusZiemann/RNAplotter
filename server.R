@@ -14,10 +14,12 @@ library(shinyWidgets)
 library(shinycssloaders)
 library(colourpicker)
 library(shinyWidgets)
+library(svglite)
+
 source("plot.R")
 
 
-
+#setwd("Y:/exchange/Marcus/M_pro/RNAplotter2")
 
 server <- function(input, output) {
   
@@ -79,6 +81,13 @@ server <- function(input, output) {
     }
     data
   })
+  
+  
+  #  observeEvent(input$table_cell_edit, {
+  #   mapD <<- editData(mapD(), input$table_cell_edit, 'table')
+  #})
+  
+  
   output$plot <- renderPlot(NULL)
   
   col <- reactive({
@@ -90,59 +99,47 @@ server <- function(input, output) {
       input$P17, input$P18, input$P19, input$P20, input$P21, input$P22, input$P23, input$P24)[1:length(N)]
   })
   
+  R <- reactive({
+    RNAplot(RNA(),mapD(), input$start, input$end, 
+            alpha = input$alpha,
+            graph_size = input$graph_size,
+            subgenes = isolate(input$subgenes),
+            line_visible = input$line_visible,
+            incom_genes = input$incom_genes,
+            color = col(),
+            max_read = input$max_read,
+            arrow_body_height = input$arrow_body_height,
+            arrowhead_height = input$arrowhead_height,
+            arrowhead_width = input$arrowhead_width,
+            filter = input$filter, 
+            Gfill= input$Gfill,
+            Gsize= input$Gsize,
+            msize= input$msize,
+            Mwidth = input$width,
+            ntlength = input$ntlength)
+  })
+  
+  
+  
   observeEvent(input$do, {
     output$plot <- renderPlot({
       
-      isolate({RNAplot(RNA(),mapD(), input$start, input$end, 
-                       alpha = input$alpha,
-                       graph_size = input$graph_size,
-                       subgenes = isolate(input$subgenes),
-                       line_visible = input$line_visible,
-                       incom_genes = input$incom_genes,
-                       color = col(),
-                       max_read = input$max_read,
-                       arrow_body_height = input$arrow_body_height,
-                       arrowhead_height = input$arrowhead_height,
-                       arrowhead_width = input$arrowhead_width,
-                       filter = input$filter, 
-                       Gfill= input$Gfill,
-                       Gsize= input$Gsize,
-                       msize= input$msize,
-                       Mwidth = input$width,
-                       ntlength = input$ntlength)})
+      isolate({R()})
     })
     
   })
   
   
   output$table <- DT::renderDT({
-    mapD2 <- mapD() %>% select(molecule, gene, start, end, orientation)
-    DT::datatable(mapD2)#, editable = TRUE)
+    
+    DT::datatable(mapD(), editable = TRUE)
   })
   output$foo = downloadHandler(
-    filename = function() {
-      paste("RNAplot.", input$download_type, sep="")
-    },
-    content = function(file) {
-      R <- isolate({RNAplot(RNA(),mapD(), input$start, input$end, 
-                   alpha = input$alpha,
-                   graph_size = input$graph_size,
-                   subgenes = isolate(input$subgenes),
-                   line_visible = input$line_visible,
-                   incom_genes = input$incom_genes,
-                   color = col(),
-                   max_read = input$max_read,
-                   arrow_body_height = input$arrow_body_height,
-                   arrowhead_height = input$arrowhead_height,
-                   arrowhead_width = input$arrowhead_width,
-                   filter = input$filter, 
-                   Gfill= input$Gfill,
-                   Gsize= input$Gsize,
-                   msize= input$msize,
-                   Mwidth = input$width,
-                   ntlength = input$ntlength)})
-      ggsave(file, plot = R, width = input$width, height = input$height, units = "in", 
-             device = input$download_type)
+    filename = function() {"RNAplot.svg"},
+    content = function(file){
+      
+      ggsave(file, plot = R(), width = input$width, height = input$height, units = "in", 
+             device = "svg")
     })
   output$tabgo <- downloadHandler(
     filename = function(){"Map.csv"}, 
