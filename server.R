@@ -14,7 +14,7 @@ library(shinyWidgets)
 library(shinycssloaders)
 library(colourpicker)
 library(shinyWidgets)
-library(svglite)
+#library(svglite)
 
 source("plot.R")
 
