@@ -51,6 +51,9 @@ RNAplot <- function(Data, Gff, start, end, alpha= 0.8, graph_size = 3,color=c(),
   
   
   Data2 <- Data
+  N <- Gff[, which(colnames(Gff) %in% c("start", "end"))]
+  Gff$start <- sapply(1:nrow(N), function(i) min(N[i,]))
+  Gff$end <- sapply(1:nrow(N), function(i) max(N[i,]))
   N <- str_sub(colnames(Data2),1, str_locate(colnames(Data2),or("fwd","rev"))[,1]-1)
   N1 <- unique(N[!is.na(N)])
   
@@ -66,7 +69,10 @@ RNAplot <- function(Data, Gff, start, end, alpha= 0.8, graph_size = 3,color=c(),
   
   
   #prepare data.frame for further processing
-  n <- start:end
+  start1 <- min(c(start,end))
+  end1 <- max(c(start,end))
+  
+  n <- start1:end1
   No<- rep(NA, length(colnames(Data2))*length(n))
   D <- data.frame(Name= No, x=No, y=No)
   D$Name <- as.vector(sapply(colnames(Data2), function(i) rep(i,length(n))))
@@ -107,7 +113,7 @@ RNAplot <- function(Data, Gff, start, end, alpha= 0.8, graph_size = 3,color=c(),
   }
   
   p1 <- ggplot(D[f,], aes(x=x, y=y))+
-    theme_bw() +                                                         #deletes background
+    theme_bw(base_family = "sans") +                                                         #deletes background
     theme(panel.grid.major = element_blank(),
           panel.grid.minor = element_blank(),
           panel.border = element_blank(),
@@ -120,7 +126,7 @@ RNAplot <- function(Data, Gff, start, end, alpha= 0.8, graph_size = 3,color=c(),
           axis.ticks.x=element_blank(),
           axis.ticks.y.left = element_line(size=1),
           plot.background = element_rect(fill='transparent', color=NA))+ #cosmetic
-    scale_x_continuous(position="top",limits = c(start,end), expand = c(0, 0))+ 
+    scale_x_continuous(position="top",limits = c(start1,end1), expand = c(0, 0))+ 
     scale_y_continuous(expand = c(0, 0),limits = c(0,max_read))          #y-axis starts at 0
   
   
@@ -160,7 +166,7 @@ RNAplot <- function(Data, Gff, start, end, alpha= 0.8, graph_size = 3,color=c(),
           axis.ticks.x=element_blank(),
           axis.ticks.y.left = element_line(size=1),
           plot.background = element_rect(fill='transparent', color=NA))+
-    scale_x_continuous(position="top",limits = c(start,end), expand = c(0, 0))+                   #x-axis at top
+    scale_x_continuous(position="top",limits = c(start1,end1), expand = c(0, 0))+                   #x-axis at top
     scale_y_continuous(expand = c(0, 0),limits = c(-max_read,0), labels=abs)     #y-axis starts at zero and shows absolut numbers
   
   if(Gfill){
@@ -172,9 +178,9 @@ RNAplot <- function(Data, Gff, start, end, alpha= 0.8, graph_size = 3,color=c(),
       scale_color_manual(values=col2, labels = Nr)
   }
   
-  g0 <- which((Gff$start>=start & Gff$end<=end) |
-                (Gff$start<start & Gff$end>start) |
-                (Gff$start<end & Gff$end>end))#get all relevant Gff-elements
+  g0 <- which((Gff$start>=start1 & Gff$end<=end1) |
+                (Gff$start<start1 & Gff$end>start1) |
+                (Gff$start<end1 & Gff$end>end1))#get all relevant Gff-elements
   
   lb <- arrow_body_height #width of gene-arrow
   lh <-arrowhead_height
@@ -183,15 +189,15 @@ RNAplot <- function(Data, Gff, start, end, alpha= 0.8, graph_size = 3,color=c(),
   if(length(g0)>0){
     G <- Gff[g0,]
     
-    s <- which((G$start<start & !G$orientation) |
-                 G$end>end & G$orientation)         #which Gff-elements would have an arrow and over the edge
-    s1 <- which(G$start<start | G$end>end)             #which Gff-elements are too long
+    s <- which((G$start<start1 & !G$orientation) |
+                 G$end>end1 & G$orientation)         #which Gff-elements would have an arrow and over the edge
+    s1 <- which(G$start<start1 | G$end>end1)             #which Gff-elements are too long
     
     if(length(s1)>0){ G$gene[s1] <- str_c(G$gene[s1], incom_genes) }  #rename elements that are to long
     
     
-    G$start <- sapply(G$start, function(i) max(i, start))   #Gff-start is mininmal start of area of Interest
-    G$end <- sapply(G$end, function(i) min(i, end))         #Gff-end is maxinmal end of area of Interest
+    G$start <- sapply(G$start, function(i) max(i, start1))   #Gff-start is mininmal start of area of Interest
+    G$end <- sapply(G$end, function(i) min(i, end1))         #Gff-end is maxinmal end of area of Interest
     
     G$start1<-NA                  #get second category for Gff-elemnts with different arrow 
     G$end1<-NA
@@ -228,7 +234,7 @@ RNAplot <- function(Data, Gff, start, end, alpha= 0.8, graph_size = 3,color=c(),
   }
   
   if(is.na(ntlength)){
-    G$gene[(G$endall -G$startall)/(end-start)*Mwidth < strwidth(G$gene, units="inches")*1.5 ] <-""
+    G$gene[(G$endall -G$startall)/(end1-start1)*Mwidth < strwidth(G$gene, units="inches")*1.5 ] <-""
   }else{
     G$gene[abs(G$endall -G$startall) < ntlength ] <-""
   }
@@ -263,7 +269,7 @@ RNAplot <- function(Data, Gff, start, end, alpha= 0.8, graph_size = 3,color=c(),
     p3 <- p3 + theme_void()
   }
   
-  p3 <- p3 + scale_x_continuous(limits = c(start,end), expand = c(0, 0))+
+  p3 <- p3 + scale_x_continuous(limits = c(start1,end1), expand = c(0, 0))+
     theme(axis.line.x.bottom=element_line(size=1),
           axis.text=element_text(size=si, face="bold"), #x-axis is plotted
           axis.title = element_blank(),
@@ -316,7 +322,7 @@ RNAplot <- function(Data, Gff, start, end, alpha= 0.8, graph_size = 3,color=c(),
   }
   
   p4 <- p4+ 
-    scale_x_continuous(limits = c(start,end), expand = c(0, 0))+         #x-axis range is exactly as the lineplots
+    scale_x_continuous(limits = c(start1,end1), expand = c(0, 0))+         #x-axis range is exactly as the lineplots
     theme(axis.text=element_text(size=12, face="bold"),    #text of axis
           axis.title = element_blank(),
           axis.text.y=element_blank(),

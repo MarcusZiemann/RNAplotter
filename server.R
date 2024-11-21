@@ -135,11 +135,11 @@ server <- function(input, output) {
     DT::datatable(mapD(), editable = TRUE)
   })
   output$foo = downloadHandler(
-    filename = function() {"RNAplot.svg"},
+    filename = function() {"RNAplot.png"},
     content = function(file){
       
       ggsave(file, plot = R(), width = input$width, height = input$height, units = "in", 
-             device = "svg")
+             device = "png")
     })
   output$tabgo <- downloadHandler(
     filename = function(){"Map.csv"}, 
