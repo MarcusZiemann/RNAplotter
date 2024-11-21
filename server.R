@@ -134,7 +134,7 @@ server <- function(input, output) {
     
     DT::datatable(mapD(), editable = TRUE)
   })
-  output$foo = downloadHandler(
+  output$foo <- downloadHandler(
     filename = function() {"RNAplot.png"},
     content = function(file){
       
