@@ -113,6 +113,7 @@ RNAplot <- function(Data, Gff, start, end, alpha= 0.8, graph_size = 3,color=c(),
   }
   
   p1 <- ggplot(D[f,], aes(x=x, y=y))+
+    #geom_hline(yintercept = 0.1, size=10)+
     theme_bw(base_family = "sans") +                                                         #deletes background
     theme(panel.grid.major = element_blank(),
           panel.grid.minor = element_blank(),
@@ -126,7 +127,7 @@ RNAplot <- function(Data, Gff, start, end, alpha= 0.8, graph_size = 3,color=c(),
           axis.ticks.x=element_blank(),
           axis.ticks.y.left = element_line(size=1),
           plot.background = element_rect(fill='transparent', color=NA))+ #cosmetic
-    scale_x_continuous(position="top",limits = c(start1,end1), expand = c(0, 0))+ 
+    scale_x_continuous(limits = c(start1,end1), expand = c(0, 0))+ 
     scale_y_continuous(expand = c(0, 0),limits = c(0,max_read))          #y-axis starts at 0
   
   
@@ -270,7 +271,8 @@ RNAplot <- function(Data, Gff, start, end, alpha= 0.8, graph_size = 3,color=c(),
   }
   
   p3 <- p3 + scale_x_continuous(limits = c(start1,end1), expand = c(0, 0))+
-    theme(axis.line.x.bottom=element_line(size=1),
+    theme(panel.background = element_blank(),
+          axis.line.x.bottom=element_line(size=1),
           axis.text=element_text(size=si, face="bold"), #x-axis is plotted
           axis.title = element_blank(),
           axis.text.y=element_blank(),
