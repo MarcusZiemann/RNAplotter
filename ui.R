@@ -29,7 +29,17 @@ ui <-fluidPage(
     sidebarPanel(
       tabsetPanel(
         tabPanel("Main",
-                 fileInput("filefwd", "Choose fwd RNA-file", multiple = FALSE,
+                 awesomeCheckbox(
+                   inputId = "reduce",
+                   label = "Do you want to reduce grp files for faster analysis?", 
+                   value = FALSE),
+                 conditionalPanel(condition = "input.reduce",
+                                  fileInput("file_red", "grp-file to be reduced", multiple = FALSE,
+                                            accept = ".grp"),
+                                  uiOutput("which_red_plot"),
+                                  downloadButton('reduce_file',  label = "reduce")),
+                 conditionalPanel(condition = "!input.reduce",
+                                  fileInput("filefwd", "Choose fwd RNA-file", multiple = FALSE,
                            accept = ".grp"),
                  fileInput("filerev", "Choose rev RNA-file", multiple = FALSE,
                            accept = ".grp"),
@@ -44,7 +54,7 @@ ui <-fluidPage(
                  sliderInput("height", "Height:", min = 3, max=30, value =7),
         selectInput("download_type", "Output Format:", 
                     choices=c("png", "pdf", "eps", "ps", "tex", "jpeg", "tiff", "bmp", "svg", "wmf"),
-                    selected = "png", width="40%")),
+                    selected = "png", width="40%"))),
         tabPanel("optional",
                  materialSwitch(inputId = "Gfill", label = "RNAreads Graphs filled?", value= TRUE),
                  conditionalPanel(condition = "input.Gfill",
