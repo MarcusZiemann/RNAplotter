@@ -217,26 +217,26 @@ server <- function(input, output) {
   
   
   
-#  output$foo <- downloadHandler(
-#    filename = function() {"RNAplot.png"},
-#    content = function(file){
-#      
-#      ggsave(file, plot = R(), width = input$width, height = input$height, units = "in", 
-#             device = "png")
-#    })
   output$foo <- downloadHandler(
-    filename = function() {
-      paste("RNAplot.", input$download_type, sep="")
-    },
-    content = function(file) {
-      if(input$download_type=="svg"){
-        save_plot(file, plot = R(), base_width = input$width, base_height = input$height, units = "in", 
-                  device = input$download_type, fix_text_size = FALSE)
-      }else{
-      save_plot(file, plot = R(), base_width = input$width, base_height = input$height, units = "in", 
-             device = input$download_type)
-      }
+    filename = function() {"RNAplot.png"},
+    content = function(file){
+      
+      ggsave(file, plot = R(), width = input$width, height = input$height, units = "in", 
+             device = "png")
     })
+#  output$foo <- downloadHandler(
+#    filename = function() {
+#      paste("RNAplot.", input$download_type, sep="")
+#    },
+#    content = function(file) {
+#      if(input$download_type=="svg"){
+#        save_plot(file, plot = R(), base_width = input$width, base_height = input$height, units = "in", 
+#                  device = input$download_type, fix_text_size = FALSE)
+#      }else{
+#      save_plot(file, plot = R(), base_width = input$width, base_height = input$height, units = "in", 
+#             device = input$download_type)
+#      }
+#    })
   
   
   
