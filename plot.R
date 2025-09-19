@@ -126,9 +126,12 @@ RNAplot <- function(Data, Gff, start, end, alpha= 0.8, graph_size = 3,color=c(),
           axis.text.x=element_blank(),
           axis.ticks.x=element_blank(),
           axis.ticks.y.left = element_line(size=1),
+          legend.background = element_blank(),
+          legend.text = element_text(size = 14),          # << increase legend text size
           plot.background = element_rect(fill='transparent', color=NA))+ #cosmetic
     scale_x_continuous(limits = c(start1,end1), expand = c(0, 0))+ 
-    scale_y_continuous(expand = c(0, 0),limits = c(0,max_read))          #y-axis starts at 0
+    scale_y_continuous(expand = c(0, 0),limits = c(0,max_read))+  #y-axis starts at 0
+    guides(fill = guide_legend(override.aes = list(size = 10)))   # bigger points/lines in legend
   
   
   
@@ -468,5 +471,23 @@ load_csv <- function(input){
 }
 
 
+load_grp <- function(input){
+  Rf <- read.table(input, quote="\"", comment.char="#")#load first grp-file
+  if(all(Rf[,1]==1:nrow(Rf))){Rf <- Rf[,2:ncol(Rf)]} 
+  if(is.na(suppressWarnings(as.numeric(Rf[1,1])))){Rf <- as.data.frame(Rf[,2:ncol(Rf)])}
+  Rf
+}
+
+load_bedgraph <- function(input, repcon){
+  Rf <- read.delim(input, header=FALSE)
+  Rf$len <- Rf$V3-Rf$V2
+  Rf <- Rf[which(Rf$V1==repcon),]
+  k <- rep(NA, max(Rf$V3))
+  for(i in 1:nrow(Rf)){
+    k[(Rf$V2[i]+1):Rf$V3[i]] <- Rf$V4[i]
+  }
+  Rf <- data.frame(k)
+  Rf
+}
 
 

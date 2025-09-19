@@ -29,17 +29,7 @@ ui <-fluidPage(
     sidebarPanel(
       tabsetPanel(
         tabPanel("Main",
-                 awesomeCheckbox(
-                   inputId = "reduce",
-                   label = "Do you want to reduce grp files for faster analysis?", 
-                   value = FALSE),
-                 conditionalPanel(condition = "input.reduce",
-                                  fileInput("file_red", "grp-file to be reduced", multiple = FALSE,
-                                            accept = ".grp"),
-                                  uiOutput("which_red_plot"),
-                                  downloadButton('reduce_file',  label = "reduce")),
-                 conditionalPanel(condition = "!input.reduce",
-                                  fileInput("filefwd", "Choose fwd RNA-file", multiple = FALSE,
+                 fileInput("filefwd", "Choose fwd RNA-file", multiple = FALSE,
                            accept = ".grp"),
                  fileInput("filerev", "Choose rev RNA-file", multiple = FALSE,
                            accept = ".grp"),
@@ -52,9 +42,9 @@ ui <-fluidPage(
                  downloadButton('foo'),
                  sliderInput("width", "Width:", min = 3, max=30, value =7),
                  sliderInput("height", "Height:", min = 3, max=30, value =7),
-        selectInput("download_type", "Output Format:", 
-                    choices=c("png", "pdf", "eps", "ps", "tex", "jpeg", "tiff", "bmp", "svg", "wmf"),
-                    selected = "png", width="40%"))),
+                 selectInput("download_type", "Output Format:", 
+                             choices=c("png", "pdf", "eps", "ps", "tex", "jpeg", "tiff", "bmp", "svg", "wmf"),
+                             selected = "png", width="40%")),
         tabPanel("optional",
                  materialSwitch(inputId = "Gfill", label = "RNAreads Graphs filled?", value= TRUE),
                  conditionalPanel(condition = "input.Gfill",
@@ -77,8 +67,21 @@ ui <-fluidPage(
                  numericInput("arrowhead_height", "height of arrow:", 10),
                  numericInput("arrowhead_width", "width of arrow:", 8)),
         tabPanel("color",
-                 uiOutput("whichcolor"))
-        
+                 uiOutput("whichcolor")),
+        tabPanel("prepare_Data",
+                 radioButtons("com_red_choice", 
+                              HTML("Either reduce a grp-file or combine multiple grp/bedgraph-files together.<br>Select one:"),
+                              choices = c("Combine", "Reduce"),
+                              inline = TRUE),
+                 conditionalPanel(condition = "input.com_red_choice =='Combine'",
+                                  fileInput("file1", "Choose RNA-files", multiple = TRUE,
+                                            accept = c(".grp", ".bedgraph")),
+                                  uiOutput("which_replicon")),
+                 conditionalPanel(condition = "input.com_red_choice =='Reduce'",
+                                  fileInput("file_red", "grp-file to be reduced", multiple = FALSE,
+                                            accept = ".grp"),
+                                  uiOutput("which_red_plot")),
+                 downloadButton('mod_file',  label = "new_file"))
       )),
     mainPanel(
       tabsetPanel(

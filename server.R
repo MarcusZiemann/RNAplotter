@@ -6,14 +6,12 @@ library(ggeasy)
 library(RColorBrewer)
 library(labeling) #eventually not necessary
 library(rebus)    #eventually not necessary
-library(stringr)
 library(shiny)
 library(DT)
 library(dplyr)
 library(shinyWidgets)
 library(shinycssloaders)
 library(colourpicker)
-library(shinyWidgets)
 library(svglite)
 library(tidyr)
 library(cowplot)
@@ -24,62 +22,6 @@ source("plot.R")
 #setwd("Y:/exchange/Marcus/M_pro/RNAplotter2")
 
 server <- function(input, output) {
-  
-  Red <- reactive({
-    inFile1 <- input$file_red
-    if (is.null(inFile1)) return(NULL)
-    Rf <- read.delim(inFile1$datapath, header=FALSE, comment.char="#")                 #load first grp-file
-    if(ncol(Rf)==1){ Rf <- read.table(inFile1$datapath, quote="\"", comment.char="")}
-    if(all(Rf[,1]==1:nrow(Rf))){Rf <- Rf[,2:ncol(Rf)]} 
-    
-    r <- readLines(inFile1$datapath, n = 100)
-    g <- length(str_extract_all(r[100], one_or_more(DGT))[[1]])
-    N0 <- str_extract_all(r[1], one_or_more(WRD))[[1]]
-    Nn <- str_extract_all(r[1], one_or_more(DGT))[[1]]
-    r0 <- as.integer(str_extract(r[10:100], one_or_more(DGT)))
-    base <- all(r0 == r0[1]+0:90)
-    name <- g == length(N0) & all(N0 != Nn)
-    
-    if(base & !name){         N <- str_c("Plot_", 1:(length(N0)))
-    }else if(!base & !name){  N <- str_c("Plot_", 1:(length(N0)))
-    }else if(base & name){    N <- N0[2:(length(N0))]
-    }else if(!base & name){   N <- N0}
-    colnames(Rf) <- N
-    Rf
-  })
-  
-  
-  output$reduce_file <- downloadHandler(
-    filename = function() {str_c("reduced_", str_c(input$red_which, collapse = "_"), ".grp")},
-    content = function(file){
-      Rf <- Red()
-      Rf <- Rf[, which(colnames(Rf)%in% input$red_which)]
-      R0f <- unlist(unite(Rf, col= "all", colnames(Rf), sep= "\t"))
-      R0f <- c(str_c("#", str_c(colnames(Rf), collapse= "\t")) , R0f)
-      writeLines(R0f,file)
-    })
-  
-  output$which_red_plot <- renderUI({
-    if(is.null(input$file_red)){
-      N<- ""
-    }else{
-      N <- colnames(Red())
-    }
-    
-    
-    tagList(
-      if(is.null(input$file_red)){
-        "Waiting for file... \n"
-      }else{
-      checkboxGroupButtons(
-        inputId = "red_which",
-        status = "info", 
-        label = "Which plots do you want to keep?",
-        choices = N,
-        direction = "vertical")
-        })
-  })
-  
   
   output$whichplots <- renderUI({
     N <- plotName()
@@ -111,28 +53,19 @@ server <- function(input, output) {
     inFile1 <- input$filefwd
     inFile2 <- input$filerev
     if (is.null(inFile1) & is.null(inFile2)) return(NULL)
-    Rf <- read.delim(inFile1$datapath, header=FALSE, comment.char="#")                 #load first grp-file
-    if(ncol(Rf)==1){ Rf <- read.table(inFile1$datapath, quote="\"", comment.char="")}
+    Rf <- read.table(inFile1$datapath, quote="\"", comment.char="#")#load first grp-file
     if(all(Rf[,1]==1:nrow(Rf))){Rf <- Rf[,2:ncol(Rf)]} 
-    Rr <- read.delim(inFile2$datapath, header=FALSE, comment.char="#")                 #load second grp-file
-    if(ncol(Rr)==1){ Rr <- read.table(inFile2$datapath, quote="\"", comment.char="")}
-    if(all(Rr[,1]==1:nrow(Rr))){Rr <- Rr[,2:ncol(Rr)]}
+    if(is.na(suppressWarnings(as.numeric(Rf[1,1])))){Rf <- as.data.frame(Rf[,2:ncol(Rf)])}
+    Rr <- read.table(inFile2$datapath, quote="\"", comment.char="#")#load second grp-file
+    if(all(Rr[,1]==1:nrow(Rr))){Rr <- Rr[,2:ncol(Rr)]} 
+    if(is.na(suppressWarnings(as.numeric(Rr[1,1])))){Rr <- as.data.frame(Rr[,2:ncol(Rr)])}
+    if(min(Rr)>=0){Rr <- Rr*(-1)}
     
-    r <- readLines(inFile1$datapath, n = 100)
-    g <- length(str_extract_all(r[100], one_or_more(DGT))[[1]])
-    N0 <- str_extract_all(r[1], one_or_more(WRD))[[1]]
-    Nn <- str_extract_all(r[1], one_or_more(DGT))[[1]]
-    r0 <- as.integer(str_extract(r[10:100], one_or_more(DGT)))
-    base <- all(r0 == r0[1]+0:90)
-    name <- g == length(N0) & all(N0 != Nn)
     
     if (is.null(input$Name)){
-      if(base & !name){         N <- str_c("Plot_", 1:(length(N0)))
-      }else if(!base & !name){  N <- str_c("Plot_", 1:(length(N0)))
-      }else if(base & name){    N <- N0[2:(length(N0))]
-      }else if(!base & name){   N <- N0}
-      
-    } else{N <- readLines(input$Name$datapath)}
+      N <- str_c("Plot_", 1:ncol(Rf))
+    } else{N <- readLines(input$Name$datapath)
+    N <- str_replace(N, or(one_or_more(SPC), "\t")%R%END,"")}
     colnames(Rf) <- str_c(N,"fwd")
     colnames(Rr) <- str_c(N,"rev")
     cbind(Rf,Rr) 
@@ -144,7 +77,10 @@ server <- function(input, output) {
     }else if(is.null(input$Name)){
       return(str_sub(colnames(RNA())[1:(ncol(RNA())/2)], 1, -4))
     }else{
-      return(readLines(input$Name$datapath))}
+      N <- readLines(input$Name$datapath)
+      N <- str_replace(N, one_or_more(SPC)%R%END,"")
+      N <- str_replace(N, "\t"%R%END, "")
+      return(N)}
   })
   
   mapD <- reactive({
@@ -224,19 +160,19 @@ server <- function(input, output) {
       ggsave(file, plot = R(), width = input$width, height = input$height, units = "in", 
              device = "png")
     })
-#  output$foo <- downloadHandler(
-#    filename = function() {
-#      paste("RNAplot.", input$download_type, sep="")
-#    },
-#    content = function(file) {
-#      if(input$download_type=="svg"){
-#        save_plot(file, plot = R(), base_width = input$width, base_height = input$height, units = "in", 
-#                  device = input$download_type, fix_text_size = FALSE)
-#      }else{
-#      save_plot(file, plot = R(), base_width = input$width, base_height = input$height, units = "in", 
-#             device = input$download_type)
-#      }
-#    })
+  #  output$foo <- downloadHandler(
+  #    filename = function() {
+  #      paste("RNAplot.", input$download_type, sep="")
+  #    },
+  #    content = function(file) {
+  #      if(input$download_type=="svg"){
+  #        save_plot(file, plot = R(), base_width = input$width, base_height = input$height, units = "in", 
+  #                  device = input$download_type, fix_text_size = FALSE)
+  #      }else{
+  #      save_plot(file, plot = R(), base_width = input$width, base_height = input$height, units = "in", 
+  #             device = input$download_type)
+  #      }
+  #    })
   
   
   
@@ -248,5 +184,97 @@ server <- function(input, output) {
       write.csv2(mapD(), fname)
     }
   )
+  
+  
+  G <- reactive({
+    inFile <- input$file1
+    if (is.null(inFile)) return(NULL)
+    for(i in 1:length(inFile$datapath)){
+      if(str_detect(inFile$name[i], DOT%R%or("grp", "txt")%R%END)){
+        Rf <- load_grp(inFile$datapath[i])
+      }else if(str_detect(inFile$name[i], DOT%R%"bedgraph"%R%END)){
+        Rf <- load_bedgraph(inFile$datapath[i], input$Replicon)
+      }
+      colnames(Rf) <- str_c(str_sub(inFile$name[i], 1, str_locate(inFile$name[i], DOT%R%one_or_more(WRD)%R%END)[,1]-1),
+                            "_Plot", 1:ncol(Rf))
+      if(i==1){
+        R <- Rf
+      }else{ R <- cbind(R, Rf)}
+    }
+    R
+  })
+  
+  output$mod_file <- downloadHandler(
+    filename = function() {str_c(input$com_red_choice, "_", str_c(input$red_which, collapse = "_"), ".grp")},
+    content = function(file){
+      if(input$com_red_choice=="Combine"){Gl <- G()
+      }else{Gl <- Red()
+      Gl <- Gl[, which(colnames(Gl)%in% input$red_which)]
+      }
+      G0 <- unlist(unite(Gl, col= "all", colnames(Gl), sep= "\t"))
+      G0 <- c(str_c("#", str_c(colnames(Gl), collapse= "\t")) , G0)
+      writeLines(G0,file)
+    })
+  
+  output$which_replicon <- renderUI({
+    if(is.null(input$file1) | !any(str_detect(input$file1$name, DOT%R%"bedgraph"%R%END))){
+      N<- ""
+    }else{
+      l <- input$file1$datapath[which( str_detect(input$file1$name, DOT%R%"bedgraph"%R%END))]
+      H <-  read.delim(l[1], header=FALSE)
+      N <- unique(H$V1)
+    }
+    tagList(
+      if(is.null(input$file1)| !any(str_detect(input$file1$name, DOT%R%"bedgraph"%R%END))){
+        ""
+      }else{
+        selectInput("Replicon", label = "Which Replicon should be used?", choices = N)
+      })
+  })
+  
+  Red <- reactive({
+    inFile1 <- input$file_red
+    if (is.null(inFile1)) return(NULL)
+    Rf <- load_grp(inFile1$datapath)
+    
+    r <- readLines(inFile1$datapath, n = 100)
+    g <- length(str_extract_all(r[100], one_or_more(DGT))[[1]])
+    N0 <- str_extract_all(r[1], one_or_more(WRD))[[1]]
+    Nn <- str_extract_all(r[1], one_or_more(DGT))[[1]]
+    r0 <- as.integer(str_extract(r[10:100], one_or_more(DGT)))
+    base <- all(r0 == r0[1]+0:90)
+    name <- g == length(N0) & all(N0 != Nn)
+    
+    if(base & !name){         N <- str_c("Plot_", 1:(length(N0)))
+    }else if(!base & !name){  N <- str_c("Plot_", 1:(length(N0)))
+    }else if(base & name){    N <- N0[2:(length(N0))]
+    }else if(!base & name){   N <- N0}
+    colnames(Rf) <- N
+    Rf
+  })
+  
+  
+  
+  output$which_red_plot <- renderUI({
+    if(is.null(input$file_red)){
+      N<- ""
+    }else{
+      N <- colnames(Red())
+    }
+    
+    tagList(
+      if(is.null(input$file_red)){
+        ""
+      }else{
+        checkboxGroupButtons(
+          inputId = "red_which",
+          status = "info", 
+          label = "Which plots do you want to keep?",
+          choices = N,
+          direction = "vertical")
+      })
+  })
+  
+  
 }
 
