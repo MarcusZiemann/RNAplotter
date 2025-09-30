@@ -13,6 +13,9 @@ library(dplyr)
 library(shinyWidgets)
 library(shinycssloaders)
 library(colourpicker)
+library(gridExtra)
+library(gridGraphics)
+library(ggpubr)
 
 col1 <- c("#228b22",#forestgreen
           "#186118", #dark green
@@ -119,13 +122,13 @@ RNAplot <- function(Data, Gff, start, end, alpha= 0.8, graph_size = 3,color=c(),
           panel.grid.minor = element_blank(),
           panel.border = element_blank(),
           panel.background = element_blank(),
-          axis.line.x.bottom=element_line(size=1),
-          axis.line.y.left=element_line(size=1),
+          axis.line.x.bottom=element_line(linewidth=1),
+          axis.line.y.left=element_line(linewidth=1),
           axis.text=element_text(size=si, face="bold"),
           axis.title = element_blank(),
           axis.text.x=element_blank(),
           axis.ticks.x=element_blank(),
-          axis.ticks.y.left = element_line(size=1),
+          axis.ticks.y.left = element_line(linewidth=1, colour = "black"),
           legend.background = element_blank(),
           legend.text = element_text(size = 14),          # << increase legend text size
           plot.background = element_rect(fill='transparent', color=NA))+ #cosmetic
@@ -162,13 +165,13 @@ RNAplot <- function(Data, Gff, start, end, alpha= 0.8, graph_size = 3,color=c(),
           panel.grid.minor = element_blank(),
           panel.border = element_blank(),
           panel.background = element_blank(),
-          axis.line.x.top=element_line(size=1),
-          axis.line.y.left=element_line(size=1),
+          axis.line.x.top=element_line(linewidth=1),
+          axis.line.y.left=element_line(linewidth=1),
           axis.text=element_text(size=si, face="bold"),
           axis.title = element_blank(),
           axis.text.x=element_blank(),
           axis.ticks.x=element_blank(),
-          axis.ticks.y.left = element_line(size=1),
+          axis.ticks.y.left = element_line(linewidth=1, colour = "black"),
           plot.background = element_rect(fill='transparent', color=NA))+
     scale_x_continuous(position="top",limits = c(start1,end1), expand = c(0, 0))+                   #x-axis at top
     scale_y_continuous(expand = c(0, 0),limits = c(-max_read,0), labels=abs)     #y-axis starts at zero and shows absolut numbers
@@ -233,7 +236,7 @@ RNAplot <- function(Data, Gff, start, end, alpha= 0.8, graph_size = 3,color=c(),
     G[r1,] <-NA
     G$orientation[r1] <- c(rep(TRUE,l1),rep(FALSE,l1))
     G$lane[r1] <- rep(g,2)
-    G$molecule[r1] <- G$molecule[1]
+    #G$molecule[r1] <- G$molecule[1]
     
   }
   
@@ -275,7 +278,7 @@ RNAplot <- function(Data, Gff, start, end, alpha= 0.8, graph_size = 3,color=c(),
   
   p3 <- p3 + scale_x_continuous(limits = c(start1,end1), expand = c(0, 0))+
     theme(panel.background = element_blank(),
-          axis.line.x.bottom=element_line(size=1),
+          axis.line.x.bottom=element_line(linewidth=1),
           axis.text=element_text(size=si, face="bold"), #x-axis is plotted
           axis.title = element_blank(),
           axis.text.y=element_blank(),
@@ -366,14 +369,18 @@ RNAplot <- function(Data, Gff, start, end, alpha= 0.8, graph_size = 3,color=c(),
     coord_cartesian(clip = "off")+
     theme_void() 
   
+  plegend <- as_ggplot(get_legend(p1))
+  
   ap <- p2 %>% 
     insert_top(p4, height=1/graph_size) %>% 
     insert_top(p3, height = 1/graph_size) %>%
-    insert_top(p1, height = 1)   #combine plots with each other, graph_size free variable
+    insert_top(p1+ theme(legend.position = "none"), height = 1)   #combine plots with each other, graph_size free variable
   ap <- ap %>% #insert_left(p_lab, width = 0.1)%>%  #combined complete plots with y-axis title
     insert_bottom(p_xlab, height = 0.15)
   
+  ap_grob <- grid.grabExpr(print(ap))
   
+  ap <- grid.arrange(ap_grob, plegend, ncol = 2, widths=c(1, 0.3))
   
   return(ap) #return plot
   

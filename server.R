@@ -45,7 +45,7 @@ server <- function(input, output) {
   output$whichplot <- renderUI({
     
     #textOutput(str_c(plotName(), collapse ="_"))
-    withSpinner(plotOutput("plot", width = str_c(input$width,"in"), height = str_c(input$height,"in")), type=6, hide.ui = FALSE)
+    withSpinner(plotOutput("plot", width = str_c(input$width*0.8,"in"), height = str_c(input$height*0.8,"in")), type=6, hide.ui = FALSE)
   })
   
   
@@ -54,7 +54,8 @@ server <- function(input, output) {
     inFile2 <- input$filerev
     if (is.null(inFile1) & is.null(inFile2)) return(NULL)
     Rf <- read.table(inFile1$datapath, quote="\"", comment.char="#")#load first grp-file
-    if(all(Rf[,1]==1:nrow(Rf))){Rf <- Rf[,2:ncol(Rf)]} 
+    if(all(Rf[,1]==1:nrow(Rf))){Rf <- Rf[,2:ncol(Rf)]
+    q1 <- TRUE}else{ q1<- FALSE} 
     if(is.na(suppressWarnings(as.numeric(Rf[1,1])))){Rf <- as.data.frame(Rf[,2:ncol(Rf)])}
     Rr <- read.table(inFile2$datapath, quote="\"", comment.char="#")#load second grp-file
     if(all(Rr[,1]==1:nrow(Rr))){Rr <- Rr[,2:ncol(Rr)]} 
@@ -63,8 +64,19 @@ server <- function(input, output) {
     
     
     if (is.null(input$Name)){
-      N <- str_c("Plot_", 1:ncol(Rf))
-    } else{N <- readLines(input$Name$datapath)
+      n1 <- readLines(inFile1$datapath, 10)
+      n2 <- readLines(inFile2$datapath, 10)
+      
+      n1 <- n1[which(str_detect(n1, START%R%"#"))[1]]
+      n2 <- n2[which(str_detect(n2, START%R%"#"))[1]]
+      n0 <- str_sub(n1, str_locate(n1, WRD)[,1],-1)
+      n0 <- str_extract_all(n0, one_or_more(WRD))[[1]]
+      if(q1 & n0[1] %in% c("BASE", "base")){n0 <- n0[2:length(n0)]}
+      
+      if(n1==n2 & length(n0)==ncol(Rf)){
+        N <- n0
+      }else{N <- str_c("Plot_", 1:ncol(Rf))}
+    }else{N <- readLines(input$Name$datapath)
     N <- str_replace(N, or(one_or_more(SPC), "\t")%R%END,"")}
     colnames(Rf) <- str_c(N,"fwd")
     colnames(Rr) <- str_c(N,"rev")
@@ -74,12 +86,8 @@ server <- function(input, output) {
   plotName  <-  reactive({
     if(is.null(input$filefwd)){
       return(NULL)
-    }else if(is.null(input$Name)){
-      return(str_sub(colnames(RNA())[1:(ncol(RNA())/2)], 1, -4))
     }else{
-      N <- readLines(input$Name$datapath)
-      N <- str_replace(N, one_or_more(SPC)%R%END,"")
-      N <- str_replace(N, "\t"%R%END, "")
+      N <- unique(str_sub(colnames(RNA()), 1, -4))
       return(N)}
   })
   
@@ -113,32 +121,28 @@ server <- function(input, output) {
       input$P17, input$P18, input$P19, input$P20, input$P21, input$P22, input$P23, input$P24)[1:length(N)]
   })
   
-  R <- reactive({
-    RNAplot(RNA(),mapD(), input$start, input$end, 
-            alpha = input$alpha,
-            graph_size = input$graph_size,
-            subgenes = isolate(input$subgenes),
-            line_visible = input$line_visible,
-            incom_genes = input$incom_genes,
-            color = col(),
-            max_read = input$max_read,
-            arrow_body_height = input$arrow_body_height,
-            arrowhead_height = input$arrowhead_height,
-            arrowhead_width = input$arrowhead_width,
-            filter = input$filter, 
-            Gfill= input$Gfill,
-            Gsize= input$Gsize,
-            msize= input$msize,
-            Mwidth = input$width,
-            ntlength = input$ntlength)
-  })
-  
-  
-  
+
   observeEvent(input$do, {
     output$plot <- renderPlot({
-      
-      isolate({R()})
+      isolate({
+        RNAplot(RNA(),mapD(), input$start, input$end, 
+              alpha = input$alpha,
+              graph_size = input$graph_size,
+              subgenes = isolate(input$subgenes),
+              line_visible = input$line_visible,
+              incom_genes = input$incom_genes,
+              color = col(),
+              max_read = input$max_read,
+              arrow_body_height = input$arrow_body_height,
+              arrowhead_height = input$arrowhead_height,
+              arrowhead_width = input$arrowhead_width,
+              filter = input$filter, 
+              Gfill= input$Gfill,
+              Gsize= input$Gsize,
+              msize= input$msize,
+              Mwidth = input$width,
+              ntlength = input$ntlength)
+      })
     })
     
   })
@@ -153,26 +157,44 @@ server <- function(input, output) {
   
   
   
+  #output$foo <- downloadHandler(
+  # filename = function() {"RNAplot.png"},
+  #content = function(file){
+  # 
+  #ggsave(file, plot = R(), width = input$width, height = input$height, units = "in", 
+  #      device = "png")
+  #})
   output$foo <- downloadHandler(
-    filename = function() {"RNAplot.png"},
-    content = function(file){
+    filename = function() {
+      paste("RNAplot.", input$download_type, sep="")
+    },
+    content = function(file) {
+      data_to_save <- RNAplot(RNA(),mapD(), input$start, input$end, 
+                              alpha = input$alpha,
+                              graph_size = input$graph_size,
+                              subgenes = isolate(input$subgenes),
+                              line_visible = input$line_visible,
+                              incom_genes = input$incom_genes,
+                              color = col(),
+                              max_read = input$max_read,
+                              arrow_body_height = input$arrow_body_height,
+                              arrowhead_height = input$arrowhead_height,
+                              arrowhead_width = input$arrowhead_width,
+                              filter = input$filter, 
+                              Gfill= input$Gfill,
+                              Gsize= input$Gsize,
+                              msize= input$msize,
+                              Mwidth = input$width,
+                              ntlength = input$ntlength)
       
-      ggsave(file, plot = R(), width = input$width, height = input$height, units = "in", 
-             device = "png")
+      if(input$download_type=="svg"){
+        save_plot(file, plot = data_to_save , base_width = input$width, base_height = input$height, units = "in", 
+                  device = input$download_type, fix_text_size = FALSE)
+      }else{
+        save_plot(file, plot = data_to_save , base_width = input$width, base_height = input$height,
+                  units = "in", device = input$download_type)
+      }
     })
-  #  output$foo <- downloadHandler(
-  #    filename = function() {
-  #      paste("RNAplot.", input$download_type, sep="")
-  #    },
-  #    content = function(file) {
-  #      if(input$download_type=="svg"){
-  #        save_plot(file, plot = R(), base_width = input$width, base_height = input$height, units = "in", 
-  #                  device = input$download_type, fix_text_size = FALSE)
-  #      }else{
-  #      save_plot(file, plot = R(), base_width = input$width, base_height = input$height, units = "in", 
-  #             device = input$download_type)
-  #      }
-  #    })
   
   
   
@@ -275,6 +297,12 @@ server <- function(input, output) {
       })
   })
   
+  output$Tutorial <- downloadHandler(
+    filename = "RNAplotter_manual.pdf",
+    content = function(file) {
+      file.copy("RNAplotter_manual.pdf", file)
+    }
+  )
   
 }
 

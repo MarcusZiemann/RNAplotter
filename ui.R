@@ -90,6 +90,10 @@ ui <-fluidPage(
                  downloadButton('tabgo', label = "Download table"))
       )
     )
+  ),
+  absolutePanel(
+    top = 10, right = 10, draggable = TRUE,
+    downloadButton("Tutorial", "Manual")
   )
 )
 
