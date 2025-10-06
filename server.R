@@ -150,7 +150,7 @@ server <- function(input, output) {
   
   output$table <- DT::renderDT({
     
-    DT::datatable(mapD(), editable = TRUE)
+    DT::datatable(mapD())#, editable = TRUE)
   })
   
   

@@ -52,6 +52,8 @@ RNAplot <- function(Data, Gff, start, end, alpha= 0.8, graph_size = 3,color=c(),
   if(is.null(max_read)) max_read <- NA
   if(is.null(ntlength)) ntlength <- NA
   
+  end <- min(nrow(Data), end)
+  
   
   Data2 <- Data
   N <- Gff[, which(colnames(Gff) %in% c("start", "end"))]
