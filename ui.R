@@ -43,7 +43,7 @@ ui <-fluidPage(
                  sliderInput("width", "Width:", min = 3, max=30, value =7),
                  sliderInput("height", "Height:", min = 3, max=30, value =7),
                  selectInput("download_type", "Output Format:", 
-                             choices=c("png", "pdf", "eps", "ps", "tex", "jpeg", "tiff", "bmp", "svg", "wmf"),
+                             choices=c("png", "pdf", "tex", "jpeg", "tiff", "bmp", "svg"),
                              selected = "png", width="40%")),
         tabPanel("optional",
                  materialSwitch(inputId = "Gfill", label = "RNAreads Graphs filled?", value= TRUE),

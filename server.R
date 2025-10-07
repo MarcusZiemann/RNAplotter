@@ -45,7 +45,7 @@ server <- function(input, output) {
   output$whichplot <- renderUI({
     
     #textOutput(str_c(plotName(), collapse ="_"))
-    withSpinner(plotOutput("plot", width = str_c(input$width*0.8,"in"), height = str_c(input$height*0.8,"in")), type=6, hide.ui = FALSE)
+    withSpinner(plotOutput("plot", width = str_c(input$width,"in"), height = str_c(input$height,"in")), type=6, hide.ui = FALSE)
   })
   
   
@@ -188,10 +188,10 @@ server <- function(input, output) {
                               ntlength = input$ntlength)
       
       if(input$download_type=="svg"){
-        save_plot(file, plot = data_to_save , base_width = input$width, base_height = input$height, units = "in", 
+        save_plot(file, plot = data_to_save , base_width = input$width*1.25, base_height = input$height*1.25, units = "in", 
                   device = input$download_type, fix_text_size = FALSE)
       }else{
-        save_plot(file, plot = data_to_save , base_width = input$width, base_height = input$height,
+        save_plot(file, plot = data_to_save , base_width = input$width*1.25, base_height = input$height*1.25,
                   units = "in", device = input$download_type)
       }
     })
