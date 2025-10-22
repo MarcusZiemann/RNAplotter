@@ -3,7 +3,6 @@ library(ggplot2)
 library(gggenes)
 library(aplot)
 library(ggeasy)
-library(RColorBrewer)
 library(labeling) #eventually not necessary
 library(rebus)    #eventually not necessary
 library(shiny)
@@ -16,6 +15,7 @@ library(svglite)
 library(tidyr)
 library(cowplot)
 library(grDevices)
+library(httpuv)
 source("plot.R")
 
 
@@ -24,7 +24,9 @@ source("plot.R")
 server <- function(input, output) {
   
   output$whichplots <- renderUI({
-    N <- plotName()
+    Q <- plotName()
+    N <- encodeURIComponent(Q)
+    names(N) <- Q
     
     tagList(
       awesomeCheckboxGroup("filter",  label = "Which graphs should be displayed?", 
@@ -53,13 +55,8 @@ server <- function(input, output) {
     inFile1 <- input$filefwd
     inFile2 <- input$filerev
     if (is.null(inFile1) & is.null(inFile2)) return(NULL)
-    Rf <- read.table(inFile1$datapath, quote="\"", comment.char="#")#load first grp-file
-    if(all(Rf[,1]==1:nrow(Rf))){Rf <- Rf[,2:ncol(Rf)]
-    q1 <- TRUE}else{ q1<- FALSE} 
-    if(is.na(suppressWarnings(as.numeric(Rf[1,1])))){Rf <- as.data.frame(Rf[,2:ncol(Rf)])}
-    Rr <- read.table(inFile2$datapath, quote="\"", comment.char="#")#load second grp-file
-    if(all(Rr[,1]==1:nrow(Rr))){Rr <- Rr[,2:ncol(Rr)]} 
-    if(is.na(suppressWarnings(as.numeric(Rr[1,1])))){Rr <- as.data.frame(Rr[,2:ncol(Rr)])}
+    Rf <- load_grp(inFile1$datapath)#, skip = input$start-1, nrows = input$end-input$start+1)#load first grp-file
+    Rr <- load_grp(inFile2$datapath)#, skip = input$start-1, nrows = input$end-input$start+1)#load second grp-file
     if(min(Rr)>=0){Rr <- Rr*(-1)}
     
     
@@ -71,7 +68,7 @@ server <- function(input, output) {
       n2 <- n2[which(str_detect(n2, START%R%"#"))[1]]
       n0 <- str_sub(n1, str_locate(n1, WRD)[,1],-1)
       n0 <- str_extract_all(n0, one_or_more(WRD))[[1]]
-      if(q1 & n0[1] %in% c("BASE", "base")){n0 <- n0[2:length(n0)]}
+      if(n0[1] %in% c("BASE", "base")){n0 <- n0[2:length(n0)]}
       
       if(n1==n2 & length(n0)==ncol(Rf)){
         N <- n0
@@ -87,7 +84,7 @@ server <- function(input, output) {
     if(is.null(input$filefwd)){
       return(NULL)
     }else{
-      N <- unique(str_sub(colnames(RNA()), 1, -4))
+      N <- unique(str_remove(colnames(RNA()), or("fwd", "rev")%R%END))
       return(N)}
   })
   

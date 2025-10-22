@@ -3,7 +3,6 @@ library(ggplot2)
 library(gggenes)
 library(aplot)
 library(ggeasy)
-library(RColorBrewer)
 library(labeling) #eventually not necessary
 library(rebus)    #eventually not necessary
 library(stringr)
@@ -17,10 +16,10 @@ library(colourpicker)
 
 
 
-source("plot.R")
+#source("plot.R")
 
 ###shiny
-options(shiny.maxRequestSize=200*1024^2)
+options(shiny.maxRequestSize=400*1024^2)
 
 ui <-fluidPage(
   titlePanel("RNAplotter"),

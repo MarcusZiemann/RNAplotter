@@ -3,7 +3,6 @@ library(ggplot2)
 library(gggenes)
 library(aplot)
 library(ggeasy)
-library(RColorBrewer)
 library(labeling) #eventually not necessary
 library(rebus)    #eventually not necessary
 library(stringr)
@@ -16,6 +15,8 @@ library(colourpicker)
 library(gridExtra)
 library(gridGraphics)
 library(ggpubr)
+library(tidyr)
+library(data.table)
 
 col1 <- c("#228b22",#forestgreen
           "#186118", #dark green
@@ -52,65 +53,58 @@ RNAplot <- function(Data, Gff, start, end, alpha= 0.8, graph_size = 3,color=c(),
   if(is.null(max_read)) max_read <- NA
   if(is.null(ntlength)) ntlength <- NA
   
-  end <- min(nrow(Data), end)
   
   
-  Data2 <- Data
+  #prepare data.frame for further processing
+  
+  start1 <- min(c(start,end))
+  end1 <- max(c(start,end))
+  end1 <- min(as.integer(rownames(Data)[nrow(Data)]), end1)
+  n <- start1:end1
+  
   N <- Gff[, which(colnames(Gff) %in% c("start", "end"))]
-  Gff$start <- sapply(1:nrow(N), function(i) min(N[i,]))
-  Gff$end <- sapply(1:nrow(N), function(i) max(N[i,]))
-  N <- str_sub(colnames(Data2),1, str_locate(colnames(Data2),or("fwd","rev"))[,1]-1)
+  Gff$start <- pmin(N$start, N$end)
+  Gff$end <- pmax(N$start, N$end)
+  N <- str_remove(colnames(Data), or("fwd","rev")%R%END)
   N1 <- unique(N[!is.na(N)])
   
   #rename
   if(length(rename_graphs)==0){rename_graphs <- N1}
   
   #filter
-  q <- filter
-  if(is.null(q)){q<- N}
-  Data2 <- Data2[,which(N %in% q)]
+  if(is.null(filter)){q<- N
+  }else{q <- URLdecode(filter)}
+  Data2 <- Data[n,which(N %in% q)]
   N <- N1[which(N1 %in% q)]
   rename_graphs <- rename_graphs[which(N1 %in% q)]
   
-  
-  #prepare data.frame for further processing
-  start1 <- min(c(start,end))
-  end1 <- max(c(start,end))
-  
-  n <- start1:end1
-  No<- rep(NA, length(colnames(Data2))*length(n))
-  D <- data.frame(Name= No, x=No, y=No)
-  D$Name <- as.vector(sapply(colnames(Data2), function(i) rep(i,length(n))))
-  D$x    <- rep(n,length(colnames(Data2)))
-  D$y   <- unlist(Data2[n,])
+  Data2$x <- n
+  D <- pivot_longer(Data2,cols = which(colnames(Data2)!="x"),               # all columns except y
+                     names_to = "Name",
+                     values_to = "y")
   si <- 13
 
   if(!is.logical(Gff$orientation)){
-    test <- c("+", "fwd", "fw", 1, "forward", "Forward", "f","TRUE")
-    Gff$orientation <- Gff$orientation %in% test
+    test <- c("+", "fwd", "fw", 1, "forward",  "f","true")
+    Gff$orientation <- tolower(Gff$orientation) %in% test
   }
   
-  z <- sort(sapply(unique(D$Name), function(i) sum(D$y[which(D$Name==i)])), decreasing =TRUE)
+  z <- sort(tapply(D$y, D$Name, sum), decreasing = TRUE)
   D$Name <- factor(D$Name, levels = names(z))#sorts samples by total number of reads
   
-  f <- which(str_sub(D$Name,-3,-1)=="fwd")              #which RNA-reads are forward
+  f <- which(str_detect(D$Name,"fwd"%R%END))              #which RNA-reads are forward
   
   Nf <- names(z)[which(str_detect(names(z),"fwd"))]
   Nf <- str_sub(Nf, 1, -4)  #get Names of RNA-reads, without "fwd"
   
-  
-  
-  
-  
-  
   if(length(color)==0){
     col <- col1[1:length(Nf)]    #create colors for RNA-reads
-    col <- as.character(sapply(Nf, function(i) col[which(N %in% i)]))
+    col <- col[match(Nf, N1)]
   }else{
-    col <- as.character(sapply(Nf, function(i) color[which(N1 %in% i)]))
+    col <- color[match(Nf, N1)]
   }
   
-  Nf1 <- rename_graphs[sapply(Nf, function(i) which(N==i))]
+  Nf1 <- rename_graphs[match(Nf, N)]
   
   if(!is.na(max_read)){
     D$y[D$y>max_read] <- max_read
@@ -158,7 +152,7 @@ RNAplot <- function(Data, Gff, start, end, alpha= 0.8, graph_size = 3,color=c(),
   Nr <- zr[which(str_sub(zr,-3,-1)=="rev")]
   Nr <- str_sub(Nr, 1, -4)
   
-  col2 <- as.character(sapply(Nr, function(i) col[which(Nf %in% i)]))   #resort colors for plot 2
+  col2 <- col[match(Nf, Nr)]#resort colors for plot 2
   
   p2 <- ggplot(D[r,], aes(x=x, y=y)) +     #lower lineplot
     geom_hline(yintercept=0, color="#000000", size=1)+
@@ -205,8 +199,8 @@ RNAplot <- function(Data, Gff, start, end, alpha= 0.8, graph_size = 3,color=c(),
     if(length(s1)>0){ G$gene[s1] <- str_c(G$gene[s1], incom_genes) }  #rename elements that are to long
     
     
-    G$start <- sapply(G$start, function(i) max(i, start1))   #Gff-start is mininmal start of area of Interest
-    G$end <- sapply(G$end, function(i) min(i, end1))         #Gff-end is maxinmal end of area of Interest
+    G$start <- pmax(G$start, start1)   #Gff-start is mininmal start of area of Interest
+    G$end <- pmin(G$end, end1)        #Gff-end is maxinmal end of area of Interest
     
     G$start1<-NA                  #get second category for Gff-elemnts with different arrow 
     G$end1<-NA
@@ -255,8 +249,8 @@ RNAplot <- function(Data, Gff, start, end, alpha= 0.8, graph_size = 3,color=c(),
       geom_gene_arrow()
     
   }else{
-    col1 <- unique(G$color[gf])
-    names(col1)<- unique(G$color[gf])
+    col2 <- unique(G$color[gf])
+    names(col2)<- unique(G$color[gf])
     
     p3 <- ggplot(G[gf,], aes(y = as.character(lane))) +
       geom_gene_arrow(aes(forward = orientation, fill=color,             #write Gene-map
@@ -269,7 +263,7 @@ RNAplot <- function(Data, Gff, start, end, alpha= 0.8, graph_size = 3,color=c(),
                       arrowhead_height = unit(lb*0.6, "mm"), 
                       arrowhead_width = unit(lb*0.3, "mm"), 
                       arrow_body_height = unit(lb, "mm"))+    #secound Gff-elements with ending outside area with irregular arrowheads
-      scale_fill_manual(values=col1) 
+      scale_fill_manual(values=col2) 
   }
   
   if(line_visible){
@@ -309,8 +303,8 @@ RNAplot <- function(Data, Gff, start, end, alpha= 0.8, graph_size = 3,color=c(),
     p4 <- ggplot() +geom_gene_arrow()#write empty plot
     
   }else{
-    col1 <- unique(G$color[gr])
-    names(col1)<- unique(G$color[gr])
+    col2 <- unique(G$color[gr])
+    names(col2)<- unique(G$color[gr])
     p4 <- ggplot(G[gr,], aes(y = as.character(10-as.integer(lane)))) + #write Gene-map (reverse)
       geom_gene_arrow(aes(forward = orientation, xmin = as.integer(start),            
                           xmax = as.integer(end), fill = color),
@@ -322,7 +316,7 @@ RNAplot <- function(Data, Gff, start, end, alpha= 0.8, graph_size = 3,color=c(),
                       arrowhead_height = unit(lb*0.6, "mm"), 
                       arrowhead_width = unit(lb*0.3, "mm"), 
                       arrow_body_height = unit(lb, "mm"))+    #secound Gff-elements with ending outside area with irregular arrowheads
-      scale_fill_manual(values=col1)     #colorization
+      scale_fill_manual(values=col2)     #colorization
   }
   
   if(line_visible){
@@ -395,7 +389,7 @@ load_Gff3 <- function(input){
   G$ID <- str_extract(G$attributes,one_or_more(WRD)%R%DOT%R%DGT)
   G$Gen <- str_extract(G$attributes,"gene-"%R%one_or_more(WRD))
   G$Gen <- str_sub(G$Gen,6,-1)
-  G$strand <- sapply(G$strand, function(i) c(1,-1)[which(c("+","-")==i)])
+  G$strand <- c(1,-1)[match(G$strand, c("+","-"))]
   b <- which(!duplicated(G[,c(4,5,7,11)]) & !is.na(G$Gen))
   G <- G[b,c(1,11,3:5,7)]
   colnames(G) <- c("molecule", "gene", "type", "start", "end", "orientation")
@@ -480,12 +474,15 @@ load_csv <- function(input){
 }
 
 
-load_grp <- function(input){
-  Rf <- read.table(input, quote="\"", comment.char="#")#load first grp-file
+load_grp <- function(input){#, skip = "__auto__", nrows = Inf) {
+  Rf <- data.table::fread(input, sep = "\t", header = FALSE, data.table = FALSE)#,skip =skip, nrows = nrows)
   if(all(Rf[,1]==1:nrow(Rf))){Rf <- Rf[,2:ncol(Rf)]} 
   if(is.na(suppressWarnings(as.numeric(Rf[1,1])))){Rf <- as.data.frame(Rf[,2:ncol(Rf)])}
   Rf
 }
+
+
+
 
 load_bedgraph <- function(input, repcon){
   Rf <- read.delim(input, header=FALSE)
