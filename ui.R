@@ -16,7 +16,7 @@ library(colourpicker)
 
 
 
-#source("plot.R")
+source("plot.R")
 
 ###shiny
 options(shiny.maxRequestSize=400*1024^2)
