@@ -34,15 +34,30 @@ server <- function(input, output) {
                            status = "danger", selected = N))
   })
   
+ # output$whichcolor <- renderUI({
+  #  N <- plotName()
+   # p("Choose colors:")
+    #tagList(
+     # lapply(1:length(N), function(i) {
+      #  colourInput(str_c("P",i), label=N[i], showColour = "both", value = col1[i])}))
+  #})
+  
   output$whichcolor <- renderUI({
-    
-    N <- plotName()
-    col <- col1[1:length(N)]    #create colors for RNA-reads
-    
-    tagList(
-      lapply(1:length(N), function(i) {
-        colourInput(str_c("P",i), label=N[i], showColour = "both", value = col[i])}))
+    if (is.null(plotName())){
+      p("")
+    } else{
+      p("Choose colors:")
+      tagList(
+        lapply(1:length(plotName()), function(i) {
+          colourInput(str_c("P",i), label=plotName()[i], showColour = "both", value = col1[i])}))
+    }
   })
+  
+  
+  
+  
+  
+  
   
   output$whichplot <- renderUI({
     
@@ -110,7 +125,6 @@ server <- function(input, output) {
   output$plot <- renderPlot(NULL)
   
   col <- reactive({
-    
     N <- plotName()
     
     c(input$P1, input$P2, input$P3, input$P4, input$P5, input$P6, input$P7, input$P8,
