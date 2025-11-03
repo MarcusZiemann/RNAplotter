@@ -477,7 +477,10 @@ load_csv <- function(input){
 load_grp <- function(input){#, skip = "__auto__", nrows = Inf) {
   Rf <- data.table::fread(input, header = FALSE, data.table = FALSE)#,skip =skip, nrows = nrows)
   if(all(Rf[,1]==1:nrow(Rf))){Rf <- Rf[,2:ncol(Rf)]} 
-  if(is.na(suppressWarnings(as.numeric(Rf[1,1])))){Rf <- as.data.frame(Rf[,2:ncol(Rf)])}
+  if(is.na(suppressWarnings(as.numeric(Rf[1,1])))){Rf <- as.data.frame(Rf[2:nrow(Rf),])}
+  if(!typeof(Rf[1,1]) %in% c("numeric", "integer")){
+    Rf <- Rf %>% mutate_all(as.numeric)
+  }
   Rf
 }
 

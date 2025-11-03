@@ -76,6 +76,10 @@ server <- function(input, output) {
     
     
     if (is.null(input$Name)){
+      nk <- read.table(inFile1$datapath, quote="\"", header = TRUE, nrows = 10)
+      if(!all(str_sub(colnames(nk), 1,1) =="X")){
+        N <- colnames(nk)
+      }else{
       n1 <- readLines(inFile1$datapath, 10)
       n2 <- readLines(inFile2$datapath, 10)
       
@@ -87,8 +91,8 @@ server <- function(input, output) {
       
       if(n1==n2 & length(n0)==ncol(Rf)){
         N <- n0
-      }else{N <- str_c("Plot_", 1:ncol(Rf))}
-    }else{N <- readLines(input$Name$datapath)
+      }else{N <- str_c("Plot_", 1:ncol(Rf))}}
+      }else{N <- readLines(input$Name$datapath)
     N <- str_replace(N, or(one_or_more(SPC), "\t")%R%END,"")}
     colnames(Rf) <- str_c(N,"fwd")
     colnames(Rr) <- str_c(N,"rev")
@@ -244,9 +248,7 @@ server <- function(input, output) {
       }else{Gl <- Red()
       Gl <- Gl[, which(colnames(Gl)%in% input$red_which)]
       }
-      G0 <- unlist(unite(Gl, col= "all", colnames(Gl), sep= "\t"))
-      G0 <- c(str_c("#", str_c(colnames(Gl), collapse= "\t")) , G0)
-      writeLines(G0,file)
+      write.table(Gl,file, sep = "\t", row.names = FALSE)
     })
   
   output$which_replicon <- renderUI({
