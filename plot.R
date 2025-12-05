@@ -54,8 +54,13 @@ RNAplot <- function(Data, Gff, start, end, alpha= 0.8, graph_size = 3,color=c(),
   if(is.null(ntlength)) ntlength <- NA
   
   
+  if(length(color)==0){
+    col <- col1[1:(ncol(Data)/2)]    #create colors for RNA-reads
+  }else{
+    col <- color
+  }
+  names(col) <- unique(str_remove(colnames(Data), or("fwd","rev")%R%END))
   
-  #prepare data.frame for further processing
   
   start1 <- min(c(start,end))
   end1 <- max(c(start,end))
@@ -80,36 +85,30 @@ RNAplot <- function(Data, Gff, start, end, alpha= 0.8, graph_size = 3,color=c(),
   
   Data2$x <- n
   D <- pivot_longer(Data2,cols = which(colnames(Data2)!="x"),               # all columns except y
-                     names_to = "Name",
-                     values_to = "y")
+                    names_to = "Name",
+                    values_to = "y")
+  D$sName <- str_remove(D$Name, or("fwd","rev")%R%END)
   si <- 13
-
+  
   if(!is.logical(Gff$orientation)){
     test <- c("+", "fwd", "fw", 1, "forward",  "f","true")
     Gff$orientation <- tolower(Gff$orientation) %in% test
   }
   
-  z <- sort(tapply(D$y, D$Name, sum), decreasing = TRUE)
-  D$Name <- factor(D$Name, levels = names(z))#sorts samples by total number of reads
-  
   f <- which(str_detect(D$Name,"fwd"%R%END))              #which RNA-reads are forward
+  r <- which(str_detect(D$Name,"rev"%R%END))              #which RNA-reads are forward
   
-  Nf <- names(z)[which(str_detect(names(z),"fwd"))]
-  Nf <- str_sub(Nf, 1, -4)  #get Names of RNA-reads, without "fwd"
   
-  if(length(color)==0){
-    col <- col1[1:length(Nf)]    #create colors for RNA-reads
-    col <- col[match(Nf, N1)]
-  }else{
-    col <- color[match(Nf, N1)]
-  }
-  
-  Nf1 <- rename_graphs[match(Nf, N)]
+  zf <- sort(tapply(D$y[f], D$sName[f], sum), decreasing = TRUE)
+  zr <- sort(tapply(D$y[r], D$sName[r], sum), decreasing = FALSE)
+  D$sName <- factor(D$sName, levels = names(zf))#sorts samples by total number of reads
   
   if(!is.na(max_read)){
     D$y[D$y>max_read] <- max_read
     D$y[D$y<(-max_read)] <- -max_read
   }
+  
+  
   
   p1 <- ggplot(D[f,], aes(x=x, y=y))+
     #geom_hline(yintercept = 0.1, size=10)+
@@ -135,24 +134,16 @@ RNAplot <- function(Data, Gff, start, end, alpha= 0.8, graph_size = 3,color=c(),
   
   
   if(Gfill){
-    p1 <- p1 + geom_area(aes(fill=Name), alpha=alpha, 
+    p1 <- p1 + geom_area(aes(fill=sName), alpha=alpha, 
                          position="identity",color="#000000", size=0.4)+         
       labs(fill = "")+                                                     #no Name for legend
-      scale_fill_manual(values=col, labels = Nf1)
+      scale_fill_manual(values=col)
   }else{
     p1 <- p1 + geom_line(aes(color=Name), size=Gsize)+         
       labs(color = "")+                                                     #no Name for legend
-      scale_color_manual(values=col, labels = Nf1)}
+      scale_color_manual(values=col)}
   
-  
-  zr <- rev(names(z))
-  
-  D$Name <- factor(D$Name, levels = zr)                      #reorder Names by size
-  r <- which(str_sub(D$Name,-3,-1)=="rev")                                  #which RNArun is reverse
-  Nr <- zr[which(str_sub(zr,-3,-1)=="rev")]
-  Nr <- str_sub(Nr, 1, -4)
-  
-  col2 <- col[match(Nf, Nr)]#resort colors for plot 2
+  D$sName <- factor(D$sName, levels = names(zr))#sorts samples by total number of reads
   
   p2 <- ggplot(D[r,], aes(x=x, y=y)) +     #lower lineplot
     geom_hline(yintercept=0, color="#000000", size=1)+
@@ -173,12 +164,12 @@ RNAplot <- function(Data, Gff, start, end, alpha= 0.8, graph_size = 3,color=c(),
     scale_y_continuous(expand = c(0, 0),limits = c(-max_read,0), labels=abs)     #y-axis starts at zero and shows absolut numbers
   
   if(Gfill){
-    p2 <- p2 + geom_area(aes(fill=Name), alpha=alpha, show.legend = FALSE, 
+    p2 <- p2 + geom_area(aes(fill=sName), alpha=alpha, show.legend = FALSE, 
                          position="identity",color="#000000", size=0.4)+         
-      scale_fill_manual(values=col2, labels = Nr)           #reorder color
+      scale_fill_manual(values=col)           #reorder color
   }else{
-    p2 <- p2 + geom_line(aes(color=Name), size=Gsize, show.legend = FALSE)+                      #no Name for legend
-      scale_color_manual(values=col2, labels = Nr)
+    p2 <- p2 + geom_line(aes(color=sName), size=Gsize, show.legend = FALSE)+                      #no Name for legend
+      scale_color_manual(values=col)
   }
   
   g0 <- which((Gff$start>=start1 & Gff$end<=end1) |
@@ -242,7 +233,7 @@ RNAplot <- function(Data, Gff, start, end, alpha= 0.8, graph_size = 3,color=c(),
     G$gene[abs(G$endall -G$startall) < ntlength ] <-""
   }
   
-
+  
   if(length(gf)==0){     #in case there is no forward Gff-element...
     
     p3 <- ggplot() +     #write empty plot
