@@ -139,7 +139,7 @@ RNAplot <- function(Data, Gff, start, end, alpha= 0.8, graph_size = 3,color=c(),
       labs(fill = "")+                                                     #no Name for legend
       scale_fill_manual(values=col)
   }else{
-    p1 <- p1 + geom_line(aes(color=Name), size=Gsize)+         
+    p1 <- p1 + geom_line(aes(color=sName), size=Gsize)+         
       labs(color = "")+                                                     #no Name for legend
       scale_color_manual(values=col)}
   
